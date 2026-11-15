@@ -74,15 +74,13 @@ Unlike the server, the client does NOT need:
     - Blocks until connection is established
     - If server is not running, returns error
 
-  Step 4: SEND DATA
-    - send(sock_fd, message, length, 0)
-    - Sends "Hello from TCP Client!" to the server
+  Step 4: CONTINUOUS COMMUNICATION LOOP
+    - while(1) loop prompts user for input via fgets()
+    - Sends message to server via send()
+    - Receives response via read()
+    - Exits if user types "exit" or closes window
 
-  Step 5: RECEIVE RESPONSE
-    - read(sock_fd, buffer, size)
-    - Reads the server's response into the buffer
-
-  Step 6: CLOSE
+  Step 5: CLOSE
     - close(sock_fd)
     - Triggers TCP 4-way termination handshake
 

@@ -93,15 +93,13 @@ A TCP Server is a program that:
     - Returns a NEW socket dedicated to that client
     - The original socket continues listening
 
-  Step 6: RECEIVE DATA
-    - read(new_socket, buffer, size)
-    - Reads the message sent by the client into buffer
+  Step 6: CONTINUOUS COMMUNICATION LOOP
+    - while(1) loop receives messages with read()
+    - Prints each message received
+    - Formulates and sends ACK response with send()
+    - Breaks loop if client sends "exit" or disconnects (EOF)
 
-  Step 7: SEND RESPONSE
-    - send(new_socket, response, length, 0)
-    - Sends the response string back to the client
-
-  Step 8: CLOSE
+  Step 7: CLOSE
     - close(new_socket) — close client connection
     - close(server_fd)  — close the listening socket
 
