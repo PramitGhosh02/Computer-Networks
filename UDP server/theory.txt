@@ -173,3 +173,23 @@ A UDP Server:
   Note: The -u flag in nc enables UDP mode.
 
 ============================================================
+
+
+============================================================
+   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+============================================================
+
+  When running the UDP server on a separate machine:
+
+  1. NO code changes are needed in udp_server.c because:
+       server_addr.sin_addr.s_addr = INADDR_ANY;
+     binds the server to ALL network interfaces.
+
+  2. Find the IP address of this Server machine:
+       $ hostname -I
+     (Provide this IP to the client machine).
+
+  3. Allow port in firewall (if needed):
+       $ sudo ufw allow 9090/udp
+
+============================================================

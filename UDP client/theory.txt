@@ -162,3 +162,35 @@ Datagram:
         waiting for a response that never comes.
 
 ============================================================
+
+
+============================================================
+   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+============================================================
+
+  When running UDP Server on Computer A and UDP Client on Computer B:
+
+  1. SERVER COMPUTER (Computer A):
+     - No code change needed! Server binds to INADDR_ANY.
+     - Find the Server's IP address:
+         $ hostname -I
+       (Example IP: 192.168.1.15)
+     - Allow UDP port 9090 in firewall:
+         $ sudo ufw allow 9090/udp
+     - Start server:
+         $ ./udp_server
+
+  2. CLIENT COMPUTER (Computer B):
+     - Both computers must be on the SAME network (Wi-Fi/LAN).
+     - Test ping from Client to Server:
+         $ ping 192.168.1.15
+     - Open udp_client.c and change the destination IP:
+         Replace:
+           inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
+         With the Server's actual IP:
+           inet_pton(AF_INET, "192.168.1.15", &server_addr.sin_addr);
+     - Compile and run:
+         $ gcc udp_client.c -o udp_client
+         $ ./udp_client
+
+============================================================

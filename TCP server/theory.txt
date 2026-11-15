@@ -176,3 +176,23 @@ A TCP Server is a program that:
         recompile.
 
 ============================================================
+
+
+============================================================
+   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+============================================================
+
+  When running the server on a separate machine:
+  
+  1. NO code changes are needed in tcp_server.c because:
+       address.sin_addr.s_addr = INADDR_ANY;
+     binds the server to ALL available network interfaces.
+
+  2. Find the IP address of this Server machine:
+       $ hostname -I
+     (Give this IP to the client machine to connect to).
+
+  3. If connection fails, check the Ubuntu firewall:
+       $ sudo ufw allow 8080/tcp
+
+============================================================

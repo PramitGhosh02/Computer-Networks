@@ -126,3 +126,37 @@ cd "Distance Vector Algorithm"
 gcc distance_vector.c -o distance_vector
 ./distance_vector
 ```
+
+
+---
+
+## 🌐 Running on Two Different Computers (LAN / Wi-Fi)
+
+To run the Server on **Computer A** and the Client on **Computer B**:
+
+1. **Find Server IP (Computer A):**
+   ```bash
+   hostname -I
+   # Example output: 192.168.1.15
+   ```
+
+2. **Allow Firewall Port on Server (if needed):**
+   ```bash
+   sudo ufw allow 8080/tcp    # For TCP Server
+   sudo ufw allow 9090/udp    # For UDP Server
+   ```
+
+3. **Update Client Code (Computer B):**
+   In `tcp_client.c` (or `udp_client.c`), replace `"127.0.0.1"` with the Server's IP:
+   ```c
+   inet_pton(AF_INET, "192.168.1.15", &server_address.sin_addr);
+   ```
+
+4. **Verify Connectivity & Run:**
+   ```bash
+   # From Computer B, ping Computer A:
+   ping 192.168.1.15
+
+   # Run client:
+   gcc tcp_client.c -o tcp_client && ./tcp_client
+   ```

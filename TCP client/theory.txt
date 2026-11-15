@@ -166,3 +166,37 @@ Unlike the server, the client does NOT need:
         the client, otherwise connect() will fail.
 
 ============================================================
+
+
+============================================================
+   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+============================================================
+
+  When running Server on Computer A and Client on Computer B:
+
+  1. SERVER COMPUTER (Computer A):
+     - NO code changes required! The server uses INADDR_ANY,
+       which automatically listens on all network interfaces.
+     - Find the Server's IP address:
+         $ hostname -I
+       (Example IP found: 192.168.1.15)
+     - Allow port 8080 through firewall (if enabled):
+         $ sudo ufw allow 8080/tcp
+     - Compile and run the server:
+         $ gcc tcp_server.c -o tcp_server
+         $ ./tcp_server
+
+  2. CLIENT COMPUTER (Computer B):
+     - Both computers must be on the SAME network (Wi-Fi/LAN).
+     - Test network reachability from Client:
+         $ ping 192.168.1.15
+     - Open tcp_client.c and change the destination IP:
+         Replace:
+           inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr);
+         With the Server's actual IP:
+           inet_pton(AF_INET, "192.168.1.15", &server_address.sin_addr);
+     - Compile and run the client:
+         $ gcc tcp_client.c -o tcp_client
+         $ ./tcp_client
+
+============================================================
