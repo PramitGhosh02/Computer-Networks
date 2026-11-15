@@ -130,7 +130,7 @@ gcc distance_vector.c -o distance_vector
 
 ---
 
-## 🌐 Running on Two Different Computers (LAN / Wi-Fi)
+## Running on Two Different Computers (LAN / Wi-Fi)
 
 To run the Server on **Computer A** and the Client on **Computer B**:
 
