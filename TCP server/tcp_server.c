@@ -23,7 +23,7 @@ int main() {
     struct sockaddr_in address;
     socklen_t addrlen = sizeof(address);
     char buffer[BUFFER_SIZE] = {0};
-    char response[BUFFER_SIZE] = {0};
+    char response[BUFFER_SIZE * 2] = {0};
     int opt = 1;
 
     /* Step 1: Create a TCP socket */
@@ -97,7 +97,7 @@ int main() {
         printf("Message received from client: \"%s\"\n", buffer);
 
         /* Send acknowledgment/echo response back to client */
-        snprintf(response, BUFFER_SIZE, "Server ACK: Received '%s'", buffer);
+        snprintf(response, sizeof(response), "Server ACK: Received '%s'", buffer);
         send(new_socket, response, strlen(response), 0);
         printf("Response sent to client: \"%s\"\n\n", response);
     }
