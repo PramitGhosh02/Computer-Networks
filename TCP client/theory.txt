@@ -1,202 +1,70 @@
-============================================================
-   TCP CLIENT - Theory and Working
-   Computer Networks Lab
-============================================================
-
+TCP CLIENT - Theory and Working
+Computer Networks Laboratory
 
 1. THEORY
-============================================================
+A TCP Client initiates a connection to a TCP Server at the
+Transport Layer (Layer 4) of the OSI model.
 
-A TCP Client is a program that initiates a connection to a
-TCP Server. It operates at the Transport Layer (Layer 4) of
-the OSI model using the Transmission Control Protocol.
+Client-Server Model:
+- Server runs first and waits passively for connections.
+- Client actively initiates the connection.
+- Once connected, bidirectional full-duplex communication occurs.
+- Either side can terminate the connection.
 
-The client-server model:
-  - Server runs first and WAITS for connections (passive)
-  - Client initiates the connection (active)
-  - Once connected, both can send and receive data
-  - Either side can close the connection
-
-TCP Client responsibilities:
-  - Create a socket
-  - Specify the server's IP address and port
-  - Initiate a connection to the server
-  - Send data (requests) to the server
-  - Receive data (responses) from the server
-  - Close the connection when done
-
-Unlike the server, the client does NOT need:
-  - bind()   → OS assigns a random available port
-  - listen() → client is active, not passive
-  - accept() → client initiates, doesn't wait
-
+Unlike the server, the client does NOT require:
+- bind(): The operating system automatically assigns an ephemeral port.
+- listen(): The client is active, not passive.
+- accept(): The client initiates, it does not wait for connections.
 
 2. SOCKET API FUNCTIONS USED
-============================================================
-
-  socket()     → Creates a TCP socket (SOCK_STREAM)
-
-  inet_pton()  → Converts IP address from text ("127.0.0.1")
-                 to binary network format
-                 "pton" = Presentation TO Network
-
-  connect()    → Initiates the TCP 3-way handshake with server
-                 Blocks until connection is established or fails
-                 This is the CLIENT-specific function
-
-  send()       → Sends data to the server through the socket
-
-  read()       → Receives data (server's response) from socket
-
-  close()      → Closes the connection and frees the socket
-
+- socket(): Creates a TCP socket (SOCK_STREAM).
+- inet_pton(): Converts IP address from human-readable text to binary
+  network format ("pton" stands for Presentation to Network).
+- connect(): Initiates the TCP three-way handshake with the server.
+- send(): Transmits data bytes through the established connection.
+- read(): Reads response data from the socket.
+- close(): Closes the socket and releases resources.
 
 3. WORKING (Step-by-Step)
-============================================================
+Step 1: Check command-line arguments. If an IP address is provided
+  (e.g., ./tcp_client 192.168.1.15), use it; otherwise default to 127.0.0.1.
+Step 2: Create a TCP socket using socket(AF_INET, SOCK_STREAM, 0).
+Step 3: Configure server address: AF_INET, server port (8080), and IP.
+Step 4: Connect to the server using connect().
+Step 5: Continuous communication loop:
+  - Prompt user to enter a message via fgets().
+  - If user enters "exit", send "exit" to server and break loop.
+  - Send message to server using send().
+  - Read server acknowledgment using read().
+  - Print server response.
+Step 6: Close socket using close().
 
-  Step 1: CREATE SOCKET
-    - socket(AF_INET, SOCK_STREAM, 0)
-    - Same as server — creates a TCP socket
-    - Returns a file descriptor
+4. HOW TO COMPILE AND RUN (Ubuntu Terminal)
+Step 1: Start the TCP server first in one terminal:
+  cd ~/Desktop/CN\ LAB/TCP\ server/
+  gcc tcp_server.c -o tcp_server
+  ./tcp_server
 
-  Step 2: CONFIGURE SERVER ADDRESS
-    - Set sin_family = AF_INET (IPv4)
-    - Set sin_port = htons(8080) (server's port)
-    - inet_pton(AF_INET, "127.0.0.1", &addr)
-      Converts "127.0.0.1" (localhost) to binary
+Step 2: Open a second terminal for the client:
+  cd ~/Desktop/CN\ LAB/TCP\ client/
 
-  Step 3: CONNECT
-    - connect(sock_fd, server_address, size)
-    - Initiates the TCP 3-way handshake:
-        Client → Server : SYN
-        Server → Client : SYN-ACK
-        Client → Server : ACK
-    - Blocks until connection is established
-    - If server is not running, returns error
+Step 3: Compile the client program:
+  gcc tcp_client.c -o tcp_client
 
-  Step 4: CONTINUOUS COMMUNICATION LOOP
-    - while(1) loop prompts user for input via fgets()
-    - Sends message to server via send()
-    - Receives response via read()
-    - Exits if user types "exit" or closes window
+Step 4: Run the client:
+  ./tcp_client
 
-  Step 5: CLOSE
-    - close(sock_fd)
-    - Triggers TCP 4-way termination handshake
+5. RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+Step 1: On Server computer, check its IP address:
+  hostname -I
+  (Example: 192.168.1.15)
 
+Step 2: On Client computer, test connectivity:
+  ping 192.168.1.15
 
-4. FLOW DIAGRAM
-============================================================
+Step 3: Run the client by passing the server IP:
+  ./tcp_client 192.168.1.15
 
-  CLIENT                              SERVER
-  ──────                              ──────
-  socket()                            socket()
-                                      bind()
-                                      listen()
-  connect() ─── SYN ───────────────→  accept()
-            ← ─ SYN-ACK ──────────
-            ─── ACK ───────────────→
-            CONNECTION ESTABLISHED
-  send()   ─── "Hello" ───────────→  read()
-  read()   ← ─ "Response" ────────  send()
-  close()  ─── FIN ───────────────→  close()
-
-
-5. KEY CONCEPTS
-============================================================
-
-  127.0.0.1 (LOCALHOST / LOOPBACK):
-    - Special IP address that refers to "this machine"
-    - Used for testing client-server on the same computer
-    - Traffic never leaves the machine
-    - Also accessible as "localhost"
-
-  inet_pton() vs inet_aton():
-    - inet_pton: Newer, supports both IPv4 and IPv6
-    - inet_aton: Older, IPv4 only
-    - "pton" = presentation to network
-    - Converts human-readable IP to binary format
-
-  connect() vs accept():
-    - connect() is used by CLIENT to initiate connection
-    - accept() is used by SERVER to receive connection
-    - They are complementary operations
-
-  CLIENT PORT:
-    - The OS automatically assigns a random ephemeral port
-      (usually 49152-65535) to the client
-    - No need to call bind() on the client side
-
-  BLOCKING CALLS:
-    - connect() blocks until server accepts or timeout
-    - read() blocks until data arrives from server
-    - This is synchronous (blocking) I/O
-
-============================================================
-
-
-============================================================
-   HOW TO RUN (Ubuntu Terminal)
-============================================================
-
-  Step 1: First, start the TCP server in one terminal:
-    $ cd ~/Desktop/CN\ LAB/TCP\ server/
-    $ gcc tcp_server.c -o tcp_server
-    $ ./tcp_server
-
-  Step 2: Open a SECOND terminal for the client:
-    $ cd ~/Desktop/CN\ LAB/TCP\ client/
-
-  Step 3: Compile the client program:
-    $ gcc tcp_client.c -o tcp_client
-
-  Step 4: Run the client:
-    $ ./tcp_client
-
-  Expected output (Client terminal):
-    TCP Client socket created successfully.
-    Connecting to server at 127.0.0.1:8080...
-    Connected to server successfully!
-    Message sent to server: "Hello from TCP Client!"
-    Response from server : "Hello from TCP Server! Message received."
-    Closing connection...
-    TCP Client shut down successfully.
-
-  Note: The TCP server MUST be running before you start
-        the client, otherwise connect() will fail.
-
-============================================================
-
-
-============================================================
-   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
-============================================================
-
-  When running Server on Computer A and Client on Computer B:
-
-  1. SERVER COMPUTER (Computer A):
-     - NO code changes required! The server uses INADDR_ANY,
-       which automatically listens on all network interfaces.
-     - Find the Server's IP address:
-         $ hostname -I
-       (Example IP found: 192.168.1.15)
-     - Allow port 8080 through firewall (if enabled):
-         $ sudo ufw allow 8080/tcp
-     - Compile and run the server:
-         $ gcc tcp_server.c -o tcp_server
-         $ ./tcp_server
-
-  2. CLIENT COMPUTER (Computer B):
-     - Both computers must be on the SAME network (Wi-Fi/LAN).
-     - Test network reachability from Client:
-         $ ping 192.168.1.15
-     - Open tcp_client.c and change the destination IP:
-         Replace:
-           inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr);
-         With the Server's actual IP:
-           inet_pton(AF_INET, "192.168.1.15", &server_address.sin_addr);
-     - Compile and run the client:
-         $ gcc tcp_client.c -o tcp_client
-         $ ./tcp_client
-
-============================================================
+Note: Both computers must be on the same Wi-Fi network or LAN.
+No code recompilation is required because the program accepts
+the IP address as a command-line argument.

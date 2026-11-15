@@ -1,196 +1,59 @@
-============================================================
-   UDP CLIENT - Theory and Working
-   Computer Networks Lab
-============================================================
-
+UDP CLIENT - Theory and Working
+Computer Networks Laboratory
 
 1. THEORY
-============================================================
+A UDP Client transmits datagrams to a UDP Server without prior
+connection establishment at the Transport Layer (Layer 4).
 
-A UDP Client sends datagrams to a UDP Server without
-establishing a connection first. It operates at the
-Transport Layer using the User Datagram Protocol.
-
-UDP Client characteristics:
-  - No connection setup (no connect() needed)
-  - Sends datagrams directly using sendto()
-  - Must specify server address with EVERY sendto() call
-  - Receives responses using recvfrom()
-  - No guarantee the datagram reaches the server
-  - No guarantee of receiving a response
-
-Difference from TCP Client:
-  - TCP Client calls connect() → establishes connection
-  - UDP Client skips connect() → sends immediately
-  - TCP Client uses send()/read()
-  - UDP Client uses sendto()/recvfrom()
-
-Datagram:
-  - A self-contained, independent unit of data
-  - Contains source address, destination address, and payload
-  - Each datagram is routed independently
-  - May arrive out of order or not at all
-
+Key Characteristics:
+- Connectionless: Sends datagrams immediately using sendto().
+- Address Specified per Call: Each sendto() call must include the
+  destination IP and port.
+- Non-blocking: No handshake delay before sending data.
+- Ephemeral Port: The OS automatically allocates an outgoing source port.
 
 2. SOCKET API FUNCTIONS USED
-============================================================
-
-  socket()     → Creates a UDP socket (SOCK_DGRAM)
-
-  inet_pton()  → Converts server IP from text to binary
-
-  sendto()     → Sends a datagram to the specified server
-                 Parameters include destination address
-                 No connection needed
-
-  recvfrom()   → Receives a datagram (server's response)
-                 Also returns the sender's address
-
-  close()      → Closes the socket
-
-  NOT USED:
-    connect()  → Not needed (connectionless)
-    bind()     → Not needed (OS assigns ephemeral port)
-
+- socket(): Creates a UDP socket (SOCK_DGRAM).
+- inet_pton(): Converts server IP from text format to binary network format.
+- sendto(): Sends a datagram to the specified destination address.
+- recvfrom(): Receives a response datagram from the server.
+- close(): Closes the socket descriptor.
 
 3. WORKING (Step-by-Step)
-============================================================
+Step 1: Check command-line arguments. If an IP address is provided
+  (e.g., ./udp_client 192.168.1.15), use it; otherwise default to 127.0.0.1.
+Step 2: Create a UDP socket using socket(AF_INET, SOCK_DGRAM, 0).
+Step 3: Configure destination server address: AF_INET, port 9090, and IP.
+Step 4: Continuous communication loop:
+  - Prompt user to enter a message via fgets().
+  - If user enters "exit", send "exit" to server and break loop.
+  - Send datagram to server using sendto().
+  - Receive server response datagram using recvfrom().
+  - Print server response.
+Step 5: Close socket using close().
 
-  Step 1: CREATE SOCKET
-    - socket(AF_INET, SOCK_DGRAM, 0)
-    - Creates a UDP datagram socket
+4. HOW TO COMPILE AND RUN (Ubuntu Terminal)
+Step 1: Start UDP server first in one terminal:
+  cd ~/Desktop/CN\ LAB/UDP\ server/
+  gcc udp_server.c -o udp_server
+  ./udp_server
 
-  Step 2: CONFIGURE SERVER ADDRESS
-    - Set sin_family = AF_INET
-    - Set sin_port = htons(9090)
-    - inet_pton(AF_INET, "127.0.0.1", &addr)
-    - This is WHERE to send the datagram
+Step 2: Open second terminal for client:
+  cd ~/Desktop/CN\ LAB/UDP\ client/
 
-  Step 3: CONTINUOUS COMMUNICATION LOOP
-    - while(1) loop prompts user for input via fgets()
-    - sendto() transmits datagram to server
-    - recvfrom() receives acknowledgment
-    - Breaks loop if user types "exit" or closes window
+Step 3: Compile client:
+  gcc udp_client.c -o udp_client
 
-  Step 4: CLOSE
-    - close(sock_fd)
-    - No termination handshake (nothing to terminate)
+Step 4: Run client:
+  ./udp_client
 
+5. RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+Step 1: On Server computer, check IP address:
+  hostname -I
+  (Example: 192.168.1.15)
 
-4. FLOW DIAGRAM
-============================================================
+Step 2: On Client computer, test connectivity:
+  ping 192.168.1.15
 
-  UDP CLIENT                          UDP SERVER
-  ──────────                          ──────────
-  socket(SOCK_DGRAM)                  socket(SOCK_DGRAM)
-                                      bind(port 9090)
-                                      recvfrom() — waiting
-
-  sendto() ─── datagram ──────────→  recvfrom() returns
-               "Hello!"              
-
-  recvfrom() ← ─ datagram ────────  sendto()
-                 "Response"
-
-  close()                            close()
-
-  Total packets: 2 (one each way)
-  Handshake packets: 0
-  Compare TCP: 3 handshake + 2 data + 4 teardown = 9 packets
-
-
-5. KEY CONCEPTS
-============================================================
-
-  CONNECTIONLESS COMMUNICATION:
-    - No setup phase — data sent immediately
-    - Each datagram is independent
-    - Server doesn't know client exists until data arrives
-    - Client doesn't know server exists until response arrives
-
-  sendto() vs send():
-    - send()   → Used with TCP (connection exists, knows dest)
-    - sendto() → Used with UDP (must specify dest each time)
-
-  recvfrom() vs read():
-    - read()     → Used with TCP (knows who sent it)
-    - recvfrom() → Used with UDP (returns sender's address)
-
-  EPHEMERAL PORT:
-    - Client's source port is auto-assigned by the OS
-    - Typically in range 49152-65535
-    - Server uses this address to send the response back
-
-  WHEN TO USE UDP:
-    - DNS lookups (quick, small packets)
-    - Video streaming (speed > reliability)
-    - Online gaming (low latency critical)
-    - VoIP calls (real-time audio)
-    - IoT sensor data (frequent small updates)
-
-============================================================
-
-
-============================================================
-   HOW TO RUN (Ubuntu Terminal)
-============================================================
-
-  Step 1: First, start the UDP server in one terminal:
-    $ cd ~/Desktop/CN\ LAB/UDP\ server/
-    $ gcc udp_server.c -o udp_server
-    $ ./udp_server
-
-  Step 2: Open a SECOND terminal for the client:
-    $ cd ~/Desktop/CN\ LAB/UDP\ client/
-
-  Step 3: Compile the client program:
-    $ gcc udp_client.c -o udp_client
-
-  Step 4: Run the client:
-    $ ./udp_client
-
-  Expected output (Client terminal):
-    UDP Client socket created successfully.
-    Sending datagram to server at 127.0.0.1:9090...
-    Message sent to server: "Hello from UDP Client!"
-    Response from server : "Hello from UDP Server! Datagram received."
-    Closing client...
-    UDP Client shut down successfully.
-
-  Note: The UDP server MUST be running before you start
-        the client, otherwise recvfrom() will block forever
-        waiting for a response that never comes.
-
-============================================================
-
-
-============================================================
-   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
-============================================================
-
-  When running UDP Server on Computer A and UDP Client on Computer B:
-
-  1. SERVER COMPUTER (Computer A):
-     - No code change needed! Server binds to INADDR_ANY.
-     - Find the Server's IP address:
-         $ hostname -I
-       (Example IP: 192.168.1.15)
-     - Allow UDP port 9090 in firewall:
-         $ sudo ufw allow 9090/udp
-     - Start server:
-         $ ./udp_server
-
-  2. CLIENT COMPUTER (Computer B):
-     - Both computers must be on the SAME network (Wi-Fi/LAN).
-     - Test ping from Client to Server:
-         $ ping 192.168.1.15
-     - Open udp_client.c and change the destination IP:
-         Replace:
-           inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
-         With the Server's actual IP:
-           inet_pton(AF_INET, "192.168.1.15", &server_addr.sin_addr);
-     - Compile and run:
-         $ gcc udp_client.c -o udp_client
-         $ ./udp_client
-
-============================================================
+Step 3: Run the client with the server IP argument:
+  ./udp_client 192.168.1.15

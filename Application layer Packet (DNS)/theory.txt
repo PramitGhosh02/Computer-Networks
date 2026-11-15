@@ -1,244 +1,100 @@
-============================================================
-   ANALYSIS OF APPLICATION LAYER PACKET (DNS)
-   Comprehensive Lab Theory, Execution & Troubleshooting Guide
-   Computer Networks Laboratory
-============================================================
+ANALYSIS OF APPLICATION LAYER PACKET (DNS)
+Comprehensive Lab Theory, Execution and Troubleshooting Guide
+Computer Networks Laboratory
 
+1. THEORY AND OBJECTIVE
+DNS (Domain Name System) is an Application Layer (Layer 7) protocol
+that translates human-readable domain names (like google.com) into
+machine-routable numerical IP addresses.
 
-============================================================
-1. THEORY & OBJECTIVE
-============================================================
+Key Characteristics:
+- Protocol Layer: Application Layer (Layer 7)
+- Transport Port: Port 53
+- Transport Type: UDP for standard queries (fast, lightweight)
+                 TCP for zone transfers and replies exceeding 512 bytes
+- Architecture: Hierarchical and distributed database
+- Caching: Relies on Time-To-Live (TTL) values to reduce latency
 
-DNS (Domain Name System) is an Application Layer (Layer 7)
-protocol that acts as the "decentralized telephone directory
-of the Internet." 
-
-Computers, routers, and switches communicate using numerical
-IP addresses (e.g., 142.250.190.14 or 2404:6800:4007:80f::200e).
-However, humans remember names (e.g., google.com). 
-DNS translates human-readable domain names into routable IP
-addresses.
-
-Key Characteristics of DNS:
-  - Protocol Layer  : Application Layer (Layer 7)
-  - Transport Port  : Port 53
-  - Transport Type  : UDP (for standard queries, fast and lightweight)
-                      TCP (for zone transfers and replies > 512 bytes)
-  - Architecture    : Hierarchical and distributed database
-  - Performance     : Relies heavily on caching (TTL mechanism)
-
-
-============================================================
 2. DNS RECORD TYPES ANALYZED
-============================================================
+1. A Record (IPv4 Address):
+   Maps domain name to 32-bit IPv4 address.
+   Example: google.com resolves to 192.178.174.100.
+   Multiple A records provide DNS Load Balancing across servers.
 
-  1. A RECORD (IPv4 Address):
-     - Maps domain name to 32-bit IPv4 address.
-     - Example: google.com -> 192.178.174.100
-     - Google returns multiple A records for Load Balancing
-       (Round-Robin DNS distributes traffic across servers).
+2. AAAA Record (IPv6 Address):
+   Maps domain name to 128-bit IPv6 address.
+   Example: google.com resolves to 2404:6800:4007:80f::200e.
 
-  2. AAAA RECORD (IPv6 Address):
-     - Maps domain name to 128-bit IPv6 address.
-     - Example: google.com -> 2404:6800:4007:80f::200e
+3. MX Record (Mail Exchange):
+   Specifies the mail server responsible for receiving emails for the domain.
+   Includes a priority value (lower number indicates higher preference).
+   Example: 10 smtp.google.com.
 
-  3. MX RECORD (Mail Exchange):
-     - Specifies the mail server(s) responsible for accepting
-       email sent to "@google.com".
-     - Format: Priority + Mail Server Hostname
-     - Example: 10 smtp.google.com.
-     - Lower preference number = HIGHER priority.
+4. SOA Record (Start of Authority):
+   Contains administrative details of the DNS zone:
+   - origin: Primary master nameserver (ns1.google.com)
+   - mail addr: Domain administrator email (dns-admin.google.com)
+   - serial: Version number of zone file
+   - refresh: Interval secondary servers query primary (900 seconds)
+   - retry: Delay before retrying failed refresh (900 seconds)
+   - expire: Limit secondary can serve zone data if primary unreachable (1800 seconds)
+   - minimum: Negative cache TTL (60 seconds)
 
-  4. SOA RECORD (Start of Authority):
-     - Contains core administrative parameters for the DNS zone.
-     - Fields:
-       * origin    : Primary master nameserver (ns1.google.com.)
-       * mail addr : Admin contact email (dns-admin.google.com.,
-                     where '.' replaces '@' -> dns-admin@google.com)
-       * serial    : Version number of zone file (incremented on updates)
-       * refresh   : How often secondary servers query primary (900s = 15m)
-       * retry     : Wait time before retrying after failed refresh (900s)
-       * expire    : Upper limit secondary can serve data if primary down (1800s)
-       * minimum   : Negative caching TTL (60s)
+5. NS Record (Name Server):
+   Lists authoritative nameservers for the domain (ns1 to ns4.google.com).
 
-  5. NS RECORD (Name Server):
-     - Identifies the authoritative nameservers for the domain.
-     - Example: ns1.google.com, ns2.google.com, ns3.google.com, ns4.google.com
+6. PTR Record (Reverse DNS):
+   Resolves IP address back to canonical domain name.
 
-  6. PTR RECORD (Pointer - Reverse DNS):
-     - Maps an IP address back to its canonical hostname.
-     - Reverse lookup for 192.178.174.138 resolves to:
-       138.174.178.192.in-addr.arpa -> lcbomo-in-f138.1e100.net
+3. STEP-BY-STEP EXECUTION WALKTHROUGH
+Step 1: Install DNS utilities in Ubuntu terminal:
+  sudo apt update && sudo apt install dnsutils -y
 
+Step 2: Run the automated DNS script:
+  cd ~/Desktop/CN\ LAB/Application\ layer\ Packet\ \(DNS\)/
+  chmod +x dns.sh
+  ./dns.sh
 
-============================================================
-3. COMPLETE STEP-BY-STEP EXECUTION WALKTHROUGH
-============================================================
+Step 3: Individual manual commands to demonstrate to examiner:
+  Basic A record lookup: nslookup google.com
+  Query A record via dig: dig google.com A
+  Query MX records: dig google.com MX
+  Query SOA records: dig google.com SOA
+  Query NS records: dig google.com NS +short
+  Reverse lookup (PTR): nslookup 192.178.174.138
 
-------------------------------------------------------------
-STEP 1: Create the Shell Script
-------------------------------------------------------------
-Create the automated analysis script (dns.sh or dns_analysis.sh):
-  $ nano dns.sh
+4. WIRESHARK LIVE PACKET CAPTURE
+Step 1: Launch Wireshark:
+  sudo wireshark &
 
-Paste the script content and save (Ctrl+O, Enter, Ctrl+X).
+Step 2: Double-click eth0 to begin capturing.
 
-------------------------------------------------------------
-STEP 2: Make the Script Executable
-------------------------------------------------------------
-In Ubuntu, shell scripts require execution permissions:
-  $ chmod +x dns.sh
+Step 3: Type dns in the filter bar and press Enter.
 
-------------------------------------------------------------
-STEP 3: Troubleshooting "command not found" (nslookup, dig, host)
-------------------------------------------------------------
-If running the script produces:
-  "./dns.sh: line 24: nslookup: command not found"
-  "./dns.sh: line 27: dig: command not found"
+Step 4: In terminal, generate DNS traffic:
+  dig google.com MX
 
-Cause:
-  The DNS query utilities are not installed in minimal Ubuntu/WSL.
+Step 5: Click the Red Square button to stop capture.
 
-Solution:
-  Install the dnsutils package:
-  $ sudo apt update && sudo apt install dnsutils -y
+Step 6: Inspect packet layers in middle pane:
+  - Frame: Physical layer timing and packet length
+  - Ethernet II: MAC source and destination addresses
+  - Internet Protocol: Source IP and Destination IP
+  - User Datagram Protocol: Port 53, length, and checksum
+  - Domain Name System: Transaction ID, Query Flags (QR=0 query, QR=1 response),
+    Question section, and Answer section
 
-  (On Ubuntu 22.04/24.04, if prompted: sudo apt install bind9-dnsutils -y)
-
-------------------------------------------------------------
-STEP 4: Run the Script
-------------------------------------------------------------
-Execute the script in your terminal:
-  $ ./dns.sh
-  (Or query another domain: ./dns.sh yahoo.com)
-
-------------------------------------------------------------
-STEP 5: Understanding the Real Output
-------------------------------------------------------------
-Sample output line-by-line explanation:
-
-  * "Server: 10.255.255.254#53"
-    The local DNS resolver / gateway on port 53.
-
-  * "Non-authoritative answer"
-    The response was delivered from your local ISP/gateway
-    cache, rather than querying Google's root master server directly.
-
-  * "status: NOERROR, id: 57284"
-    The DNS query succeeded without errors.
-    The Transaction ID (57284) uniquely pairs the request to the reply.
-
-  * "flags: qr rd ra"
-    qr = Query/Response (1 = response)
-    rd = Recursion Desired (client requested resolver to find answer)
-    ra = Recursion Available (resolver supports recursive queries)
-
-  * "294 IN A 192.178.174.100"
-    294 is the TTL (Time-To-Live in seconds) remaining in cache.
-
-  * "Query time: 8 msec"
-    Round-trip time taken to resolve the DNS query.
-
-
-============================================================
-4. WIRESHARK LIVE PACKET CAPTURE & ANALYSIS
-============================================================
-
-------------------------------------------------------------
-STEP 1: Troubleshooting Wireshark Permissions
-------------------------------------------------------------
-If Wireshark displays:
-  "You do not have permission to capture on device eth0
-   (socket: Operation not permitted)"
-
-Cause:
-  Raw packet capturing requires administrative / root permissions.
-
-Fix (Immediate):
-  Run Wireshark with sudo:
-  $ sudo wireshark
-
-Fix (Permanent for non-root):
-  $ sudo dpkg-reconfigure wireshark-common  (select <Yes>)
-  $ sudo usermod -aG wireshark $USER
-  $ sudo setcap cap_net_raw,cap_net_admin=eip /usr/bin/dumpcap
-
-------------------------------------------------------------
-STEP 2: Starting the Capture
-------------------------------------------------------------
-1. Launch Wireshark:
-   $ sudo wireshark
-2. Double-click "eth0" (or "any") at the top of the interface list.
-   (Do NOT select remote plugins like "wifidump").
-3. Capture begins immediately.
-
-------------------------------------------------------------
-STEP 3: Filtering & Generating DNS Packets
-------------------------------------------------------------
-1. In the green display filter bar at top, type:
-   dns
-   (Or use: udp.port == 53)
-   Press Enter.
-2. In a separate terminal tab, generate a query:
-   $ dig google.com MX
-3. In Wireshark, click the RED SQUARE button to stop capture.
-
-------------------------------------------------------------
-STEP 4: Examining the Packet Layers
-------------------------------------------------------------
-Select any captured DNS query packet. The middle window reveals
-the complete OSI layer encapsulation:
-
-  1. Frame (Physical Layer):
-     - Total bytes transmitted, arrival timestamp.
-
-  2. Ethernet II (Data Link Layer):
-     - Source MAC address, Destination MAC address.
-     - Type: IPv4 (0x0800).
-
-  3. Internet Protocol Version 4 (Network Layer):
-     - Source IP (your computer) -> Destination IP (DNS Server).
-     - Protocol: UDP (17).
-     - TTL (Time To Live).
-
-  4. User Datagram Protocol (Transport Layer):
-     - Source Port: Random ephemeral port (e.g., 54321).
-     - Destination Port: 53 (Well-known port for DNS).
-     - Length and Checksum.
-
-  5. Domain Name System (Application Layer):
-     - Transaction ID: Matching ID for request & response.
-     - Flags: QR = 0 (Query) vs QR = 1 (Response).
-     - Questions: Name (google.com), Type (A / MX / SOA).
-     - Answers: Resolved IP address / mail server / priority.
-
-
-============================================================
-5. VIVA VOCE CHEAT SHEET
-============================================================
-
-Q1: Which layer of the OSI model does DNS operate at?
+5. VIVA QUESTIONS
+Q1: Which OSI layer does DNS belong to?
 A1: Application Layer (Layer 7).
 
-Q2: Why does DNS predominantly use UDP instead of TCP?
-A2: DNS queries are small (under 512 bytes) and speed is
-    critical. UDP avoids connection setup (no 3-way handshake).
-    If a packet drops, the client simply retransmits.
+Q2: Why does DNS primarily use UDP instead of TCP?
+A2: DNS queries are small (under 512 bytes) and require low latency.
+    UDP eliminates connection setup delay.
 
 Q3: When does DNS use TCP?
-A3: When responses exceed 512 bytes (DNS truncation, TC flag)
-    and for DNS Zone Transfers between primary & secondary servers.
+A3: For DNS Zone Transfers and when response payloads exceed 512 bytes.
 
-Q4: What is the purpose of an MX record?
-A4: Mail Exchange record specifies the mail server that handles
-    incoming email for the domain, with an integer priority value.
-
-Q5: What is the role of TTL in DNS?
-A5: Time-To-Live defines how long a client or resolver can cache
-    the DNS record before sending a fresh query to the nameserver.
-
-Q6: What is Reverse DNS?
-A6: Resolving an IP address back to its domain name using PTR
-    records in the special ".in-addr.arpa" domain.
-
-============================================================
+Q4: What is an MX record?
+A4: Mail Exchange record specifies the mail server that handles emails
+    for the domain, along with an integer priority ranking.

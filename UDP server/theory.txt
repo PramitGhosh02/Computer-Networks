@@ -1,195 +1,70 @@
-============================================================
-   UDP SERVER - Theory and Working
-   Computer Networks Lab
-============================================================
-
+UDP SERVER - Theory and Working
+Computer Networks Laboratory
 
 1. THEORY
-============================================================
-
-UDP (User Datagram Protocol) is a connectionless protocol
-operating at the Transport Layer (Layer 4) of the OSI model.
-Unlike TCP, it provides NO guarantees for delivery, ordering,
-or error correction.
+UDP (User Datagram Protocol) is a connectionless transport protocol
+operating at Layer 4 of the OSI model.
 
 Key characteristics of UDP:
-  - Connectionless (no handshake, no connection setup)
-  - Unreliable (no guarantee of delivery)
-  - No ordering (packets may arrive out of order)
-  - No flow control or congestion control
-  - Low overhead (small 8-byte header vs TCP's 20+ bytes)
-  - Fast (no setup delay, no acknowledgments)
-  - Supports broadcast and multicast
+- Connectionless: No handshake or connection setup.
+- Unreliable: Best-effort delivery without acknowledgments or retransmissions.
+- Unordered: Datagrams may arrive out of order.
+- Lightweight: Fixed 8-byte header (compared to TCP's 20-60 bytes).
+- Low latency: Ideal for DNS lookups, video streaming, VoIP, and gaming.
 
-UDP is preferred when:
-  - Speed matters more than reliability
-  - Small amount of data (fits in one datagram)
-  - Real-time applications (video call, gaming, VoIP)
-  - DNS queries (quick request-response)
-
-UDP Header (only 8 bytes):
-  ┌────────────────┬────────────────┐
-  │  Source Port    │  Dest Port     │  4 bytes
-  ├────────────────┼────────────────┤
-  │  Length         │  Checksum      │  4 bytes
-  └────────────────┴────────────────┘
-  Total: 8 bytes (vs TCP's 20-60 bytes)
-
-A UDP Server:
-  - Binds to a port and waits for datagrams
-  - Does NOT listen or accept (no connection concept)
-  - Receives datagrams with sender's address info
-  - Can reply to the sender using their address
-
+UDP Header Structure (8 bytes total):
+- Source Port (2 bytes)
+- Destination Port (2 bytes)
+- Length (2 bytes)
+- Checksum (2 bytes)
 
 2. SOCKET API FUNCTIONS USED
-============================================================
+- socket(): Creates a datagram socket using SOCK_DGRAM.
+- setsockopt(): Configures SO_REUSEADDR to avoid port binding conflicts.
+- bind(): Binds the socket to the port (9090) and IP (INADDR_ANY).
+- recvfrom(): Receives an incoming datagram and records the sender address.
+- sendto(): Sends a datagram directly to a specified destination address.
+- close(): Closes the socket descriptor.
 
-  socket()    → Creates a UDP socket
-               Uses SOCK_DGRAM (datagram) instead of SOCK_STREAM
-
-  bind()      → Assigns IP + port to the socket
-
-  recvfrom()  → Receives a datagram AND the sender's address
-               Unlike read(), it tells you WHO sent the data
-               Essential for UDP since there's no connection
-
-  sendto()    → Sends a datagram TO a specific address
-               Unlike send(), you must specify the destination
-               each time (no established connection)
-
-  close()     → Closes the socket
-
-  NOT USED (TCP-only):
-    listen()  → Not needed (no connection queue)
-    accept()  → Not needed (no connection to accept)
-
+Note: UDP does not use listen() or accept() because it is connectionless.
 
 3. WORKING (Step-by-Step)
-============================================================
+Step 1: Create a UDP socket using socket(AF_INET, SOCK_DGRAM, 0).
+Step 2: Set SO_REUSEADDR option using setsockopt().
+Step 3: Configure server address: AF_INET, INADDR_ANY, port 9090.
+Step 4: Bind the socket to port 9090 using bind().
+Step 5: Continuous communication loop:
+  - Receive datagram from client using recvfrom().
+  - Print sender IP, port, and message.
+  - If client sends "exit", break loop.
+  - Send acknowledgment datagram back to client using sendto().
+Step 6: Close socket using close().
 
-  Step 1: CREATE SOCKET
-    - socket(AF_INET, SOCK_DGRAM, 0)
-    - SOCK_DGRAM = UDP datagram socket
-    - Compare: SOCK_STREAM = TCP stream socket
+4. HOW TO COMPILE AND RUN (Ubuntu Terminal)
+Step 1: Open terminal and navigate to directory:
+  cd ~/Desktop/CN\ LAB/UDP\ server/
 
-  Step 2: CONFIGURE ADDRESS
-    - Set sin_family = AF_INET (IPv4)
-    - Set sin_addr = INADDR_ANY
-    - Set sin_port = htons(9090)
-    - memset() to zero-initialize the structure
+Step 2: Compile the UDP server:
+  gcc udp_server.c -o udp_server
 
-  Step 3: BIND
-    - bind(server_fd, address, size)
-    - Associates socket with port 9090
-    - Server is now ready to receive datagrams
+Step 3: Run the server:
+  ./udp_server
 
-  Step 4: CONTINUOUS RECEIVE LOOP
-    - while(1) loop receives datagrams using recvfrom()
-    - recvfrom() fills client_addr with sender's IP and port
-    - Checks for "exit" command
-    - Prints received message
+Step 4: In a second terminal, compile and run UDP client:
+  cd ~/Desktop/CN\ LAB/UDP\ client/
+  gcc udp_client.c -o udp_client
+  ./udp_client
 
-  Step 5: SEND ACKNOWLEDGMENT
-    - sendto(server_fd, response, length, 0, client_addr, len)
-    - Sends ACK back TO the client's address
+5. RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+Step 1: On Server computer, check IP address:
+  hostname -I
+  (Example: 192.168.1.15)
 
-  Step 6: CLOSE
-    - close(server_fd)
+Step 2: Allow UDP port 9090 in firewall if needed:
+  sudo ufw allow 9090/udp
 
+Step 3: Start server on Server computer:
+  ./udp_server
 
-4. FLOW DIAGRAM
-============================================================
-
-  UDP SERVER                          UDP CLIENT
-  ──────────                          ──────────
-  socket(SOCK_DGRAM)                  socket(SOCK_DGRAM)
-  bind(port 9090)
-  recvfrom() ─── waits ──┐
-                         │
-                         ← ────── sendto(server_addr)
-  datagram received      │
-                         │
-  sendto(client_addr) ── → ────── recvfrom()
-                         │
-  close()                         close()
-
-  NOTE: No handshake! Data sent immediately.
-
-
-5. TCP vs UDP COMPARISON
-============================================================
-
-  ┌─────────────────┬──────────────────┬──────────────────┐
-  │ Feature         │ TCP              │ UDP              │
-  ├─────────────────┼──────────────────┼──────────────────┤
-  │ Connection      │ Connection-based │ Connectionless   │
-  │ Reliability     │ Guaranteed       │ Best-effort      │
-  │ Ordering        │ In-order         │ No guarantee     │
-  │ Header size     │ 20-60 bytes      │ 8 bytes          │
-  │ Handshake       │ 3-way            │ None             │
-  │ Speed           │ Slower           │ Faster           │
-  │ Socket type     │ SOCK_STREAM      │ SOCK_DGRAM       │
-  │ Send/Recv       │ send()/read()    │ sendto()/recvfrom│
-  │ Connection call │ listen()/accept()│ Not needed       │
-  │ Use cases       │ HTTP, FTP, SSH   │ DNS, Video, VoIP │
-  └─────────────────┴──────────────────┴──────────────────┘
-
-============================================================
-
-
-============================================================
-   HOW TO RUN (Ubuntu Terminal)
-============================================================
-
-  Step 1: Open a terminal and navigate to the folder:
-    $ cd ~/Desktop/CN\ LAB/UDP\ server/
-
-  Step 2: Compile the program:
-    $ gcc udp_server.c -o udp_server
-
-  Step 3: Run the server:
-    $ ./udp_server
-
-  Step 4: Open a SECOND terminal and test with netcat (UDP):
-    $ echo "Hello from UDP client!" | nc -u localhost 9090
-
-    OR compile and run the UDP client program:
-    $ cd ~/Desktop/CN\ LAB/UDP\ client/
-    $ gcc udp_client.c -o udp_client
-    $ ./udp_client
-
-  Expected output (Server terminal):
-    UDP Server socket created successfully.
-    Socket bound to port 9090.
-    UDP Server is running on port 9090...
-    Waiting for a datagram from client...
-    Datagram received!
-    Client IP  : 127.0.0.1
-    Message from client: "Hello from UDP client!"
-    Response sent to client.
-
-  Note: The server must be running BEFORE the client sends.
-  Note: The -u flag in nc enables UDP mode.
-
-============================================================
-
-
-============================================================
-   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
-============================================================
-
-  When running the UDP server on a separate machine:
-
-  1. NO code changes are needed in udp_server.c because:
-       server_addr.sin_addr.s_addr = INADDR_ANY;
-     binds the server to ALL network interfaces.
-
-  2. Find the IP address of this Server machine:
-       $ hostname -I
-     (Provide this IP to the client machine).
-
-  3. Allow port in firewall (if needed):
-       $ sudo ufw allow 9090/udp
-
-============================================================
+Step 4: On Client computer, run client with Server IP:
+  ./udp_client 192.168.1.15

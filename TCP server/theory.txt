@@ -1,198 +1,92 @@
-============================================================
-   TCP SERVER - Theory and Working
-   Computer Networks Lab
-============================================================
-
+TCP SERVER - Theory and Working
+Computer Networks Laboratory
 
 1. THEORY
-============================================================
-
 TCP (Transmission Control Protocol) is a connection-oriented
 protocol operating at the Transport Layer (Layer 4) of the
 OSI model. It provides reliable, ordered, and error-checked
 delivery of data between applications.
 
 Key characteristics of TCP:
-  - Connection-oriented (requires handshake before data transfer)
-  - Reliable delivery (guarantees all data reaches destination)
-  - Flow control (prevents sender from overwhelming receiver)
-  - Congestion control (adapts to network conditions)
-  - Full-duplex communication (data flows in both directions)
-  - Byte-stream oriented (treats data as a continuous stream)
+- Connection-oriented: requires handshake before data transfer.
+- Reliable delivery: guarantees all data reaches destination.
+- Flow control: prevents sender from overwhelming receiver.
+- Congestion control: adapts to network traffic conditions.
+- Full-duplex: data flows in both directions simultaneously.
+- Byte-stream oriented: treats data as a continuous stream.
 
-TCP uses a THREE-WAY HANDSHAKE to establish a connection:
-  1. Client → Server : SYN (synchronize)
-  2. Server → Client : SYN-ACK (synchronize + acknowledge)
-  3. Client → Server : ACK (acknowledge)
+TCP Three-Way Handshake (Connection Establishment):
+1. Client to Server: SYN (synchronize)
+2. Server to Client: SYN-ACK (synchronize + acknowledge)
+3. Client to Server: ACK (acknowledge)
 
-TCP uses a FOUR-WAY HANDSHAKE to terminate a connection:
-  1. Client → Server : FIN
-  2. Server → Client : ACK
-  3. Server → Client : FIN
-  4. Client → Server : ACK
+TCP Four-Way Handshake (Connection Termination):
+1. Client to Server: FIN
+2. Server to Client: ACK
+3. Server to Client: FIN
+4. Client to Server: ACK
 
-A TCP Server is a program that:
-  - Listens on a specific port for incoming connections
-  - Accepts client connections
-  - Receives and processes client requests
-  - Sends responses back to clients
-
+TCP Server Responsibilities:
+- Listens on a specified port for incoming client connections.
+- Accepts client connection requests.
+- Continuously receives messages from the connected client.
+- Sends acknowledgments or replies back to the client.
 
 2. SOCKET API FUNCTIONS USED
-============================================================
-
-  socket()  → Creates a new communication endpoint (socket)
-              Parameters: domain (AF_INET for IPv4),
-              type (SOCK_STREAM for TCP), protocol (0)
-
-  bind()    → Assigns an address (IP + port) to the socket
-              Binds the server to a specific port so clients
-              know where to connect
-
-  listen()  → Marks the socket as passive (ready to accept)
-              The backlog parameter sets the queue size for
-              pending connections
-
-  accept()  → Extracts the first connection from the queue
-              Blocks until a client connects
-              Returns a NEW socket for the specific client
-
-  read()    → Receives data from the connected client
-
-  send()    → Sends data back to the connected client
-
-  close()   → Closes the socket and frees resources
-
+- socket(): Creates a communication endpoint.
+  Parameters: AF_INET (IPv4), SOCK_STREAM (TCP), protocol 0.
+- setsockopt(): Configures socket options (SO_REUSEADDR prevents
+  "Address already in use" errors on server restarts).
+- bind(): Associates the socket with a local IP address and port number.
+- listen(): Puts the socket in passive listening mode with a backlog queue.
+- accept(): Blocks until a client connects, returning a new dedicated
+  socket descriptor for communication with that client.
+- read(): Reads incoming data from the client socket buffer.
+- send(): Transmits data back to the client.
+- close(): Closes the socket descriptors and releases resources.
 
 3. WORKING (Step-by-Step)
-============================================================
+Step 1: Create a TCP socket using socket(AF_INET, SOCK_STREAM, 0).
+Step 2: Set SO_REUSEADDR option using setsockopt().
+Step 3: Configure server address: AF_INET, INADDR_ANY, and port (htons(8080)).
+Step 4: Bind the socket to the port using bind().
+Step 5: Listen for connections using listen().
+Step 6: Accept incoming client connection using accept().
+Step 7: Continuous communication loop:
+  - Read message from client using read().
+  - Print received client message.
+  - Send acknowledgment response using send().
+  - If client sends "exit" or disconnects, break loop.
+Step 8: Close client and server sockets using close().
 
-  Step 1: CREATE SOCKET
-    - socket(AF_INET, SOCK_STREAM, 0)
-    - Creates a TCP socket (SOCK_STREAM = TCP)
-    - Returns a file descriptor (integer) for the socket
+4. HOW TO COMPILE AND RUN (Ubuntu Terminal)
+Step 1: Open terminal and navigate to directory:
+  cd ~/Desktop/CN\ LAB/TCP\ server/
 
-  Step 2: CONFIGURE ADDRESS
-    - Set sin_family = AF_INET (IPv4)
-    - Set sin_addr = INADDR_ANY (accept from any interface)
-    - Set sin_port = htons(8080) (convert to network byte order)
+Step 2: Compile the server program:
+  gcc tcp_server.c -o tcp_server
 
-  Step 3: BIND
-    - bind(server_fd, address, size)
-    - Associates the socket with port 8080
-    - Only one process can bind to a port at a time
+Step 3: Run the server:
+  ./tcp_server
 
-  Step 4: LISTEN
-    - listen(server_fd, 3)
-    - Server enters passive mode, waiting for connections
-    - Backlog = 3 means up to 3 pending connections queued
+Step 4: In a second terminal, run the client:
+  cd ~/Desktop/CN\ LAB/TCP\ client/
+  gcc tcp_client.c -o tcp_client
+  ./tcp_client
 
-  Step 5: ACCEPT
-    - new_socket = accept(server_fd, ...)
-    - Blocks (waits) until a client connects
-    - Returns a NEW socket dedicated to that client
-    - The original socket continues listening
+5. RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
+Step 1: On Server computer, find its IP address:
+  hostname -I
+  (Example: 192.168.1.15)
 
-  Step 6: CONTINUOUS COMMUNICATION LOOP
-    - while(1) loop receives messages with read()
-    - Prints each message received
-    - Formulates and sends ACK response with send()
-    - Breaks loop if client sends "exit" or disconnects (EOF)
+Step 2: Allow port in Ubuntu firewall if needed:
+  sudo ufw allow 8080/tcp
 
-  Step 7: CLOSE
-    - close(new_socket) — close client connection
-    - close(server_fd)  — close the listening socket
+Step 3: Start server on Server computer:
+  ./tcp_server
 
+Step 4: On Client computer, run client with Server's IP:
+  ./tcp_client 192.168.1.15
 
-4. FLOW DIAGRAM
-============================================================
-
-  SERVER                              CLIENT
-  ──────                              ──────
-  socket()
-  bind()
-  listen()
-  accept() ──── waits ────┐
-                          │
-                          ← ─── connect()
-  accept() returns        │
-                          │
-  read() ← ────────────── ← ─── send()
-                          │
-  send() ─────────────── → ─── read()
-                          │
-  close()                     close()
-
-
-5. KEY CONCEPTS
-============================================================
-
-  PORT NUMBER:
-    - A 16-bit number (0-65535) identifying a service
-    - Well-known ports: 0-1023 (HTTP=80, FTP=21, SSH=22)
-    - Registered ports: 1024-49151
-    - Dynamic ports: 49152-65535
-
-  htons() (Host TO Network Short):
-    - Converts port number from host byte order to
-      network byte order (big-endian)
-    - Required because different machines may store
-      bytes in different orders
-
-  INADDR_ANY:
-    - Tells the server to accept connections on ANY
-      network interface (WiFi, Ethernet, loopback, etc.)
-
-  SOCK_STREAM:
-    - Socket type for TCP (stream-oriented)
-    - Contrast with SOCK_DGRAM for UDP (datagram-oriented)
-
-============================================================
-
-
-============================================================
-   HOW TO RUN (Ubuntu Terminal)
-============================================================
-
-  Step 1: Open a terminal and navigate to the folder:
-    $ cd ~/Desktop/CN\ LAB/TCP\ server/
-
-  Step 2: Compile the program:
-    $ gcc tcp_server.c -o tcp_server
-
-  Step 3: Run the server:
-    $ ./tcp_server
-
-  Step 4: Open a SECOND terminal and test with a client:
-    $ echo "Hello from client!" | nc localhost 8080
-
-    OR compile and run the TCP client program:
-    $ cd ~/Desktop/CN\ LAB/TCP\ client/
-    $ gcc tcp_client.c -o tcp_client
-    $ ./tcp_client
-
-  Note: The server must be running BEFORE the client connects.
-  Note: If port 8080 is busy, change PORT in the code and
-        recompile.
-
-============================================================
-
-
-============================================================
-   RUNNING ON TWO DIFFERENT COMPUTERS (LAN / Wi-Fi)
-============================================================
-
-  When running the server on a separate machine:
-  
-  1. NO code changes are needed in tcp_server.c because:
-       address.sin_addr.s_addr = INADDR_ANY;
-     binds the server to ALL available network interfaces.
-
-  2. Find the IP address of this Server machine:
-       $ hostname -I
-     (Give this IP to the client machine to connect to).
-
-  3. If connection fails, check the Ubuntu firewall:
-       $ sudo ufw allow 8080/tcp
-
-============================================================
+Note: No code change is needed in tcp_server.c because INADDR_ANY
+binds to all available network interfaces.
