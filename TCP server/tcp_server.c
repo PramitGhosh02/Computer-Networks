@@ -34,6 +34,14 @@ int main() {
     }
     printf("TCP Server socket created successfully.\n");
 
+    /* Prevent "Address already in use" error on restart */
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("setsockopt failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
     /* Step 2: Configure the server address structure */
     address.sin_family = AF_INET;         /* IPv4 */
     address.sin_addr.s_addr = INADDR_ANY; /* Accept connections on any interface */
