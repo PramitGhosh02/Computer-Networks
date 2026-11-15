@@ -52,7 +52,6 @@ int main() {
     }
     printf("Connected to server successfully!\n");
     printf("Type your messages below (type 'exit' to quit):\n");
-    printf("===================================================\n\n");
 
     /* Step 4: Continuous communication loop */
     while (1) {

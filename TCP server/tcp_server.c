@@ -70,11 +70,9 @@ int main() {
         close(server_fd);
         exit(EXIT_FAILURE);
     }
-    printf("\n========================================\n");
     printf("Client connected!\n");
     printf("Client IP  : %s\n", inet_ntoa(address.sin_addr));
     printf("Client Port: %d\n", ntohs(address.sin_port));
-    printf("========================================\n");
     printf("Ready to receive continuous messages...\n\n");
 
     /* Step 6: Continuous communication loop */
