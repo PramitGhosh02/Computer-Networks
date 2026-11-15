@@ -1,0 +1,176 @@
+============================================================
+   UDP SERVER - Theory and Working
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+UDP (User Datagram Protocol) is a connectionless protocol
+operating at the Transport Layer (Layer 4) of the OSI model.
+Unlike TCP, it provides NO guarantees for delivery, ordering,
+or error correction.
+
+Key characteristics of UDP:
+  - Connectionless (no handshake, no connection setup)
+  - Unreliable (no guarantee of delivery)
+  - No ordering (packets may arrive out of order)
+  - No flow control or congestion control
+  - Low overhead (small 8-byte header vs TCP's 20+ bytes)
+  - Fast (no setup delay, no acknowledgments)
+  - Supports broadcast and multicast
+
+UDP is preferred when:
+  - Speed matters more than reliability
+  - Small amount of data (fits in one datagram)
+  - Real-time applications (video call, gaming, VoIP)
+  - DNS queries (quick request-response)
+
+UDP Header (only 8 bytes):
+  ┌────────────────┬────────────────┐
+  │  Source Port    │  Dest Port     │  4 bytes
+  ├────────────────┼────────────────┤
+  │  Length         │  Checksum      │  4 bytes
+  └────────────────┴────────────────┘
+  Total: 8 bytes (vs TCP's 20-60 bytes)
+
+A UDP Server:
+  - Binds to a port and waits for datagrams
+  - Does NOT listen or accept (no connection concept)
+  - Receives datagrams with sender's address info
+  - Can reply to the sender using their address
+
+
+2. SOCKET API FUNCTIONS USED
+============================================================
+
+  socket()    → Creates a UDP socket
+               Uses SOCK_DGRAM (datagram) instead of SOCK_STREAM
+
+  bind()      → Assigns IP + port to the socket
+
+  recvfrom()  → Receives a datagram AND the sender's address
+               Unlike read(), it tells you WHO sent the data
+               Essential for UDP since there's no connection
+
+  sendto()    → Sends a datagram TO a specific address
+               Unlike send(), you must specify the destination
+               each time (no established connection)
+
+  close()     → Closes the socket
+
+  NOT USED (TCP-only):
+    listen()  → Not needed (no connection queue)
+    accept()  → Not needed (no connection to accept)
+
+
+3. WORKING (Step-by-Step)
+============================================================
+
+  Step 1: CREATE SOCKET
+    - socket(AF_INET, SOCK_DGRAM, 0)
+    - SOCK_DGRAM = UDP datagram socket
+    - Compare: SOCK_STREAM = TCP stream socket
+
+  Step 2: CONFIGURE ADDRESS
+    - Set sin_family = AF_INET (IPv4)
+    - Set sin_addr = INADDR_ANY
+    - Set sin_port = htons(9090)
+    - memset() to zero-initialize the structure
+
+  Step 3: BIND
+    - bind(server_fd, address, size)
+    - Associates socket with port 9090
+    - Server is now ready to receive datagrams
+
+  Step 4: RECEIVE DATAGRAM (No listen/accept!)
+    - recvfrom(server_fd, buffer, size, 0, client_addr, &len)
+    - Blocks until a datagram arrives
+    - Fills client_addr with sender's IP and port
+    - This is the key difference from TCP
+
+  Step 5: SEND RESPONSE
+    - sendto(server_fd, response, length, 0, client_addr, len)
+    - Sends response TO the client's address
+    - Must specify destination (no connection exists)
+
+  Step 6: CLOSE
+    - close(server_fd)
+
+
+4. FLOW DIAGRAM
+============================================================
+
+  UDP SERVER                          UDP CLIENT
+  ──────────                          ──────────
+  socket(SOCK_DGRAM)                  socket(SOCK_DGRAM)
+  bind(port 9090)
+  recvfrom() ─── waits ──┐
+                         │
+                         ← ────── sendto(server_addr)
+  datagram received      │
+                         │
+  sendto(client_addr) ── → ────── recvfrom()
+                         │
+  close()                         close()
+
+  NOTE: No handshake! Data sent immediately.
+
+
+5. TCP vs UDP COMPARISON
+============================================================
+
+  ┌─────────────────┬──────────────────┬──────────────────┐
+  │ Feature         │ TCP              │ UDP              │
+  ├─────────────────┼──────────────────┼──────────────────┤
+  │ Connection      │ Connection-based │ Connectionless   │
+  │ Reliability     │ Guaranteed       │ Best-effort      │
+  │ Ordering        │ In-order         │ No guarantee     │
+  │ Header size     │ 20-60 bytes      │ 8 bytes          │
+  │ Handshake       │ 3-way            │ None             │
+  │ Speed           │ Slower           │ Faster           │
+  │ Socket type     │ SOCK_STREAM      │ SOCK_DGRAM       │
+  │ Send/Recv       │ send()/read()    │ sendto()/recvfrom│
+  │ Connection call │ listen()/accept()│ Not needed       │
+  │ Use cases       │ HTTP, FTP, SSH   │ DNS, Video, VoIP │
+  └─────────────────┴──────────────────┴──────────────────┘
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: Open a terminal and navigate to the folder:
+    $ cd ~/Desktop/CN\ LAB/UDP\ server/
+
+  Step 2: Compile the program:
+    $ gcc udp_server.c -o udp_server
+
+  Step 3: Run the server:
+    $ ./udp_server
+
+  Step 4: Open a SECOND terminal and test with netcat (UDP):
+    $ echo "Hello from UDP client!" | nc -u localhost 9090
+
+    OR compile and run the UDP client program:
+    $ cd ~/Desktop/CN\ LAB/UDP\ client/
+    $ gcc udp_client.c -o udp_client
+    $ ./udp_client
+
+  Expected output (Server terminal):
+    UDP Server socket created successfully.
+    Socket bound to port 9090.
+    UDP Server is running on port 9090...
+    Waiting for a datagram from client...
+    Datagram received!
+    Client IP  : 127.0.0.1
+    Message from client: "Hello from UDP client!"
+    Response sent to client.
+
+  Note: The server must be running BEFORE the client sends.
+  Note: The -u flag in nc enables UDP mode.
+
+============================================================

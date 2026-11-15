@@ -1,0 +1,200 @@
+============================================================
+   LEAKY BUCKET ALGORITHM - Theory and Working
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+The Leaky Bucket Algorithm is a traffic shaping and rate
+limiting algorithm used in computer networks to control
+the rate at which data is transmitted onto the network.
+
+Analogy:
+  Imagine a bucket with a small hole at the bottom:
+  - Water (packets) is poured in at varying rates (bursty)
+  - Water leaks out at a CONSTANT rate through the hole
+  - If the bucket overflows, excess water (packets) is lost
+  - Output is always smooth and steady
+
+Purpose:
+  - Converts BURSTY traffic into SMOOTH, constant-rate traffic
+  - Prevents network congestion
+  - Ensures fair bandwidth usage
+  - Used in ATM networks, traffic policing
+
+Key properties:
+  - Input rate: Variable (bursty)
+  - Output rate: CONSTANT (never exceeds leak rate)
+  - Bucket size: Maximum buffer capacity
+  - Overflow: Excess packets are DROPPED
+
+Where it is used:
+  - Network traffic policing (ISPs)
+  - ATM (Asynchronous Transfer Mode) networks
+  - Rate limiting APIs
+  - QoS (Quality of Service) enforcement
+
+
+2. ALGORITHM
+============================================================
+
+  At each time tick:
+
+  1. Incoming packets arrive and are added to the bucket
+
+  2. IF bucket_level > bucket_size:
+       → Overflow! Drop excess packets
+       → bucket_level = bucket_size
+
+  3. IF bucket_level > 0:
+       → Leak (transmit) min(bucket_level, leak_rate) packets
+       → bucket_level -= leaked_packets
+
+  4. Repeat for next time tick
+
+  Pseudocode:
+    for each time unit:
+        bucket += incoming_packets
+        if bucket > capacity:
+            dropped = bucket - capacity
+            bucket = capacity
+        output = min(bucket, leak_rate)
+        bucket -= output
+
+
+3. WORKING (Step-by-Step)
+============================================================
+
+  Example: Bucket Size = 10, Leak Rate = 3
+
+  Time 1: 5 packets arrive
+    Bucket: 0 + 5 = 5 (within capacity)
+    Leak: 3 packets transmitted
+    Bucket after: 5 - 3 = 2
+    Dropped: 0
+
+  Time 2: 12 packets arrive
+    Bucket: 2 + 12 = 14 (OVERFLOW!)
+    Dropped: 14 - 10 = 4 packets
+    Bucket: 10 (capped at capacity)
+    Leak: 3 packets transmitted
+    Bucket after: 10 - 3 = 7
+    
+  Time 3: 1 packet arrives
+    Bucket: 7 + 1 = 8 (within capacity)
+    Leak: 3 packets transmitted
+    Bucket after: 8 - 3 = 5
+    Dropped: 0
+
+
+4. VISUAL REPRESENTATION
+============================================================
+
+     Incoming traffic (bursty, variable rate)
+         │ │ │ │ │
+         │ │ │ │ │    ← Varying number of packets
+         ▼ ▼ ▼ ▼ ▼
+       ┌───────────┐
+       │ ~ ~ ~ ~ ~ │  ← Bucket (fixed capacity)
+       │ ~ ~ ~ ~ ~ │     Overflow = DROPPED
+       │ ~ ~ ~ ~   │
+       │ ~ ~ ~     │
+       │ ~ ~       │
+       └─────┬─────┘
+             │
+             │  ← Leak (constant rate)
+             │     Always same number per tick
+             ▼
+       ═══════════
+       Smooth output at constant rate
+
+  Key: The output NEVER exceeds the leak rate,
+       regardless of how fast packets arrive.
+
+
+5. KEY CONCEPTS
+============================================================
+
+  TRAFFIC SHAPING vs TRAFFIC POLICING:
+    - Shaping: Buffers excess packets, transmits later
+    - Policing: Drops excess packets immediately
+    - Leaky Bucket does BOTH (buffers up to capacity, drops rest)
+
+  BURST HANDLING:
+    - Leaky Bucket DOES NOT allow bursts in output
+    - Even if bucket is full, output is still at leak rate
+    - This is the main limitation compared to Token Bucket
+
+  PARAMETERS:
+    - Bucket Size (B): Maximum packets that can be buffered
+      Larger bucket → more burst absorption, more latency
+    - Leak Rate (R): Constant output rate (packets/sec)
+      This defines the maximum network utilization
+
+  ADVANTAGES:
+    ✓ Simple to implement
+    ✓ Produces perfectly smooth output traffic
+    ✓ Prevents network congestion
+    ✓ Guarantees maximum transmission rate
+
+  DISADVANTAGES:
+    ✗ Cannot handle legitimate bursts efficiently
+    ✗ Idle time is wasted (doesn't save capacity)
+    ✗ Dropped packets waste upstream bandwidth
+    ✗ Fixed output rate may not fully utilize network
+
+  LEAKY BUCKET vs TOKEN BUCKET:
+    ┌────────────────┬──────────────────┬──────────────────┐
+    │ Feature        │ Leaky Bucket     │ Token Bucket     │
+    ├────────────────┼──────────────────┼──────────────────┤
+    │ Output rate    │ Always constant  │ Variable (burst) │
+    │ Bursts allowed │ No               │ Yes              │
+    │ Idle time      │ Wasted           │ Tokens saved     │
+    │ Mechanism      │ Packets leak out │ Tokens consumed  │
+    │ Complexity     │ Simpler          │ Slightly complex │
+    └────────────────┴──────────────────┴──────────────────┘
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: Open a terminal and navigate to the folder:
+    $ cd ~/Desktop/CN\ LAB/Leaky\ Bucket\ Algorithm/
+
+  Step 2: Compile the program:
+    $ gcc leaky_bucket.c -o leaky_bucket
+
+  Step 3: Run the program:
+    $ ./leaky_bucket
+
+  Step 4: Enter the inputs when prompted:
+    Enter bucket size (max capacity): 10
+    Enter leak rate (packets sent per tick): 3
+    Use random traffic? (1=Yes, 0=No): 1
+
+    OR for manual input:
+    Use random traffic? (1=Yes, 0=No): 0
+    Time 1: 5
+    Time 2: 12
+    Time 3: 2
+    ... (enter 10 values)
+
+  Expected output:
+    ┌──────┬──────────┬────────┬──────────┬────────┬─────────┐
+    │ Time │ Incoming │ In     │ Leaked   │ Bucket │ Dropped │
+    │      │ Packets  │ Bucket │ (Output) │ Level  │ Packets │
+    ├──────┼──────────┼────────┼──────────┼────────┼─────────┤
+    │   1  │      5   │    5   │      3   │    2   │     0   │
+    │   2  │     12   │   12   │      3   │    7   │     4   │
+    ...
+    Shows total received, sent, and dropped at the end.
+
+  Note: The leaked (output) column will NEVER exceed the
+        leak rate — that's the whole point of leaky bucket!
+
+============================================================

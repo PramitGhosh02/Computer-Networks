@@ -1,0 +1,140 @@
+   DNS PACKET ANALYSIS USING WIRESHARK - Lab Guide
+   Computer Networks Lab
+
+OBJECTIVE:
+  Capture and analyze DNS packets using Wireshark to understand
+  the structure of Application Layer DNS protocol messages.
+
+
+STEP 1: INSTALL WIRESHARK (if not installed)
+
+  sudo apt update
+  sudo apt install wireshark -y
+
+  During installation, select "Yes" to allow non-superusers to
+  capture packets. Then add your user to the wireshark group:
+
+  sudo usermod -aG wireshark $USER
+
+  Log out and log back in for the group change to take effect.
+
+
+STEP 2: START PACKET CAPTURE
+
+  1. Open Wireshark:
+     $ wireshark &
+
+  2. Select the active network interface (e.g., eth0, wlan0, 
+     or "any" to capture on all interfaces).
+
+  3. In the display filter bar at the top, type:
+     dns
+
+  4. Click the blue shark fin button to START capturing.
+
+
+STEP 3: GENERATE DNS TRAFFIC
+
+  Open a separate terminal and run these commands:
+
+  a) Basic DNS query:
+     $ nslookup google.com
+
+  b) MX record query:
+     $ dig google.com MX
+
+  c) SOA record query:
+     $ dig google.com SOA
+
+  Each command will generate DNS request and response packets
+  that Wireshark will capture.
+
+
+STEP 4: STOP CAPTURE & ANALYZE PACKETS
+
+  1. Click the red square button to STOP capturing.
+
+  2. In the filter bar, ensure "dns" is applied.
+
+  3. You will see DNS packets listed. Click on any packet.
+
+
+STEP 5: ANALYZE DNS PACKET STRUCTURE
+
+  In the packet details pane (middle section), expand:
+
+  ┌───────────────────────────────────────────────────────┐
+  │ Frame           → Physical layer info (bytes, time)     					│
+  │ Ethernet II     → Data Link layer (MAC addresses)       					│
+  │ Internet Proto  → Network layer (IP src/dst)            					│
+  │ UDP             → Transport layer (port 53)             					│
+  │ DNS             → Application layer (the DNS message)   					│
+  └───────────────────────────────────────────────────────┘
+
+  Expand the DNS section to see:
+
+  a) DNS HEADER:
+     - Transaction ID   : Unique ID matching query to response
+     - Flags            : QR (query/response), Opcode, AA, RD, RA
+     - Questions Count  : Number of questions (usually 1)
+     - Answers Count    : Number of answer records (in response)
+
+  b) DNS QUERY SECTION (Request Packet):
+     - Name  : The domain queried (e.g., google.com)
+     - Type  : A (IPv4), MX (Mail), SOA (Authority), AAAA (IPv6)
+     - Class : IN (Internet)
+
+  c) DNS ANSWER SECTION (Response Packet):
+     - Name  : The queried domain
+     - Type  : Record type
+     - TTL   : Time to live (seconds to cache)
+     - Data  : The actual answer (IP address, mail server, etc.)
+
+
+STEP 6: KEY OBSERVATIONS TO NOTE
+
+  1. DNS uses UDP port 53 (visible in the Transport layer).
+
+  2. A DNS query packet (QR=0) is followed by a DNS response
+     packet (QR=1) with the same Transaction ID.
+
+  3. Compare packet sizes:
+     - Query packets are smaller (just the question)
+     - Response packets are larger (question + answer records)
+
+  4. For MX records, the answer section shows:
+     - Priority (preference value)
+     - Mail server hostname
+
+  5. For SOA records, the answer section shows:
+     - Primary nameserver (MNAME)
+     - Admin email (RNAME)
+     - Serial number
+     - Refresh, Retry, Expire, Minimum TTL
+
+
+STEP 7: SAVE THE CAPTURE (for your lab report)
+
+  File → Save As → dns_capture.pcapng
+
+
+============================================================
+SUMMARY TABLE
+============================================================
+
+  +----------+--------+------------------------------------------+
+  | Record   | Type   | Purpose                                  |
+  +----------+--------+------------------------------------------+
+  | A        | 1      | Maps domain to IPv4 address              |
+  | AAAA     | 28     | Maps domain to IPv6 address              |
+  | MX       | 15     | Mail exchange server for the domain      |
+  | SOA      | 6      | Start of Authority (admin info)          |
+  | NS       | 2      | Authoritative nameservers                |
+  | PTR      | 12     | Reverse lookup (IP to domain)            |
+  | CNAME    | 5      | Canonical name (alias)                   |
+  +----------+--------+------------------------------------------+
+
+  DNS Port    : 53
+  Protocol    : UDP (Application layer over Transport layer)
+  OSI Layer   : Layer 7 (Application)
+

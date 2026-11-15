@@ -1,0 +1,210 @@
+============================================================
+   SLIDING WINDOW PROTOCOL - Theory and Working
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+The Sliding Window Protocol is a Data Link Layer and
+Transport Layer protocol used for reliable and efficient
+data transfer. It provides both FLOW CONTROL and ERROR
+CONTROL in data communication.
+
+Why Sliding Window?
+  - Stop-and-Wait sends 1 frame, waits for ACK → very slow
+  - Sliding Window sends MULTIPLE frames before needing ACK
+  - The "window" defines how many frames can be in-flight
+  - Window "slides" forward as ACKs are received
+
+Key concepts:
+  - Window Size (W): Max frames sent without ACK
+  - Sender Window: Tracks frames allowed to send
+  - Receiver Window: Tracks frames expected to receive
+  - Sequence Numbers: Identify each frame uniquely
+  - ACK: Acknowledgment confirming receipt
+
+Types of Sliding Window Protocols:
+
+  a) Go-Back-N (GBN):
+     - Sender window = N, Receiver window = 1
+     - If frame lost, ALL frames from that point are resent
+     - Simpler receiver, but wastes bandwidth on errors
+
+  b) Selective Repeat (SR):
+     - Sender window = N, Receiver window = N
+     - Only the LOST frame is retransmitted
+     - More complex, but more efficient
+
+  c) Stop-and-Wait (special case):
+     - Window size = 1
+     - Send 1 frame, wait for ACK, send next
+     - Simplest but slowest
+
+
+2. WINDOW MECHANISM
+============================================================
+
+  Sender Window (size = 4):
+
+  Before sending:
+    ┌───┬───┬───┬───┬───┬───┬───┬───┐
+    │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │
+    └───┴───┴───┴───┴───┴───┴───┴───┘
+    [=======WINDOW=======]
+     Can send these 4
+
+  After sending 0,1 and ACK for 0 received:
+    ┌───┬───┬───┬───┬───┬───┬───┬───┐
+    │ ✓ │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │
+    └───┴───┴───┴───┴───┴───┴───┴───┘
+        [=======WINDOW=======]
+         Window slides right →
+
+  After ACK for 1 received:
+    ┌───┬───┬───┬───┬───┬───┬───┬───┐
+    │ ✓ │ ✓ │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │
+    └───┴───┴───┴───┴───┴───┴───┴───┘
+            [=======WINDOW=======]
+             Window slides again →
+
+  The window SLIDES forward as ACKs arrive,
+  allowing new frames to enter the window.
+
+
+3. WORKING (Step-by-Step)
+============================================================
+
+  Step 1: INITIALIZATION
+    - User enters total number of frames and window size
+    - All frames marked as "unsent"
+
+  Step 2: SEND WINDOW OF FRAMES
+    - Send all frames within the current window
+    - Each frame has a 20% chance of being "lost" (simulated)
+    - Lost frames need retransmission
+
+  Step 3: RECEIVE ACKNOWLEDGMENTS
+    - For each successfully sent frame, an ACK is received
+    - For lost frames, no ACK arrives
+
+  Step 4: RETRANSMIT LOST FRAMES
+    - Any frame without an ACK is retransmitted
+    - Retransmission continues until all frames in window
+      are acknowledged
+
+  Step 5: SLIDE THE WINDOW
+    - Move the window forward by window_size positions
+    - New frames enter the window
+
+  Step 6: REPEAT
+    - Steps 2-5 repeat until ALL frames are sent and ACKed
+
+  Step 7: COMPLETION
+    - All frames successfully transmitted and acknowledged
+
+
+4. FLOW DIAGRAM
+============================================================
+
+  SENDER                              RECEIVER
+  ──────                              ────────
+  Send Frame 0 ──────────────────→  Receive Frame 0
+  Send Frame 1 ──────────────────→  Receive Frame 1
+  Send Frame 2 ───── LOST ──✗       (not received)
+  Send Frame 3 ──────────────────→  Receive Frame 3
+                                    
+               ← ─── ACK 0 ──────  Send ACK 0
+               ← ─── ACK 1 ──────  Send ACK 1
+               (No ACK 2 - lost)
+               ← ─── ACK 3 ──────  Send ACK 3
+
+  Timeout: Retransmit Frame 2
+  Send Frame 2 ──────────────────→  Receive Frame 2
+               ← ─── ACK 2 ──────  Send ACK 2
+
+  Window slides forward →
+
+
+5. KEY CONCEPTS
+============================================================
+
+  FLOW CONTROL:
+    - Window size limits how fast sender can transmit
+    - Prevents sender from overwhelming a slow receiver
+    - Receiver advertises its window size
+
+  ERROR CONTROL:
+    - Lost or corrupted frames are detected (no ACK)
+    - Frames are retransmitted after timeout
+    - Sequence numbers prevent duplicates
+
+  SEQUENCE NUMBERS:
+    - Each frame gets a unique sequence number
+    - For window size W, need at least W+1 sequence numbers
+    - Numbers wrap around (modular arithmetic)
+
+  EFFICIENCY:
+    - Stop-and-Wait: Utilization = 1/(1+2a) where a = Tp/Tt
+    - Sliding Window: Utilization = W/(1+2a) for W ≤ 1+2a
+    - W = window size, Tp = propagation delay, Tt = transmission time
+
+  PIGGYBACKING:
+    - ACKs can be attached to data frames going in
+      the opposite direction
+    - Reduces overhead (fewer separate ACK packets)
+
+  COMPARISON:
+    ┌──────────────────┬──────────┬──────────┬──────────┐
+    │ Feature          │ Stop&Wait│ Go-Back-N│ Sel.Repeat│
+    ├──────────────────┼──────────┼──────────┼──────────┤
+    │ Sender Window    │ 1        │ N        │ N        │
+    │ Receiver Window  │ 1        │ 1        │ N        │
+    │ Retransmission   │ 1 frame  │ All from │ Only lost│
+    │                  │          │ error    │ frame    │
+    │ Efficiency       │ Low      │ Medium   │ High     │
+    │ Complexity       │ Simple   │ Medium   │ Complex  │
+    └──────────────────┴──────────┴──────────┴──────────┘
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: Open a terminal and navigate to the folder:
+    $ cd ~/Desktop/CN\ LAB/Sliding\ window\ protocol/
+
+  Step 2: Compile the program:
+    $ gcc sliding_window.c -o sliding_window
+
+  Step 3: Run the program:
+    $ ./sliding_window
+
+  Step 4: Enter the inputs when prompted:
+    Enter the total number of frames to send: 8
+    Enter the window size: 3
+
+  Expected behavior:
+    - The program sends frames in batches of window size
+    - Some frames are randomly "lost" (simulated 20% loss)
+    - Lost frames are retransmitted
+    - The window slides forward after all frames are ACKed
+    - Displays frame status after each window transmission
+
+  Sample output:
+    WINDOW POSITION: [0 - 2]
+    SENDER: Transmitting frames in window...
+      → Sending Frame 0  ✓ [SENT SUCCESSFULLY]
+      → Sending Frame 1  ✗ [LOST IN TRANSIT]
+      → Sending Frame 2  ✓ [SENT SUCCESSFULLY]
+    SENDER: Retransmitting lost frames...
+      → Retransmitting Frame 1  ✓ [SENT SUCCESSFULLY]
+    WINDOW: Sliding forward...
+
+  Note: The simulation uses random loss, so output varies
+        each time you run it.
+
+============================================================

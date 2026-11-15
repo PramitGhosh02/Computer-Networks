@@ -1,0 +1,259 @@
+============================================================
+   PACKET ANALYSIS USING WIRESHARK - Theory and Working
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+Packet analysis (also called packet sniffing or protocol
+analysis) is the process of capturing and inspecting data
+packets as they travel across a network. Wireshark is the
+most widely used open-source packet analyzer.
+
+Wireshark can:
+  - Capture live network traffic in real-time
+  - Display packets with full protocol decode
+  - Filter packets by protocol, IP, port, etc.
+  - Reconstruct TCP streams
+  - Export captures for later analysis
+  - Analyze all OSI layers in each packet
+
+A network packet encapsulates data layer by layer:
+  ┌─────────────────────────────────────────────┐
+  │ Application Data  (HTTP, DNS payload)       │
+  ├─────────────────────────────────────────────┤
+  │ Transport Header  (TCP/UDP port, seq num)   │
+  ├─────────────────────────────────────────────┤
+  │ Network Header    (IP src, dst, TTL)        │
+  ├─────────────────────────────────────────────┤
+  │ Data Link Header  (MAC src, dst, EtherType) │
+  ├─────────────────────────────────────────────┤
+  │ Physical Layer    (bits on the wire)        │
+  └─────────────────────────────────────────────┘
+
+This is called ENCAPSULATION — each layer wraps the
+data from the layer above with its own header.
+
+
+2. PROTOCOLS ANALYZED
+============================================================
+
+  A) DNS (Application Layer - Layer 7)
+     - Purpose: Domain name to IP address resolution
+     - Port: UDP 53
+     - Filter: dns
+     - Key fields: Transaction ID, Query Name, Answer IP
+     - Observation: Query (QR=0) followed by Response (QR=1)
+
+  B) HTTP (Application Layer - Layer 7)
+     - Purpose: Web page request and delivery
+     - Port: TCP 80
+     - Filter: http
+     - Key fields: Method (GET/POST), URL, Status Code
+     - Observation: Request-Response model over TCP
+
+  C) TCP (Transport Layer - Layer 4)
+     - Purpose: Reliable, ordered data delivery
+     - Filter: tcp
+     - Key fields: Src/Dst Port, Seq, Ack, Flags, Window
+     - Observation: 3-way handshake (SYN→SYN-ACK→ACK)
+
+  D) UDP (Transport Layer - Layer 4)
+     - Purpose: Fast, connectionless delivery
+     - Filter: udp
+     - Key fields: Src/Dst Port, Length, Checksum
+     - Observation: Only 8-byte header, no handshake
+
+  E) IP (Network Layer - Layer 3)
+     - Purpose: Logical addressing and routing
+     - Filter: ip
+     - Key fields: Version, TTL, Protocol, Src/Dst IP
+     - Observation: TTL decreases at each hop
+
+  F) ARP (Data Link Layer - Layer 2)
+     - Purpose: Maps IP addresses to MAC addresses
+     - Filter: arp
+     - Key fields: Opcode (Request/Reply), Sender/Target MAC+IP
+     - Observation: Request is broadcast, Reply is unicast
+
+  G) ICMP (Network Layer - Layer 3)
+     - Purpose: Network diagnostics (ping, traceroute)
+     - Filter: icmp
+     - Key fields: Type (8=Request, 0=Reply), Sequence
+     - Observation: Used by ping command
+
+
+3. WORKING OF WIRESHARK ANALYSIS
+============================================================
+
+  Step 1: CAPTURE SETUP
+    - Open Wireshark
+    - Select network interface (eth0, wlan0, or "any")
+    - Start capture (blue shark fin button)
+
+  Step 2: TRAFFIC GENERATION
+    - Run the generate_traffic.sh script
+    - This creates packets for DNS, HTTP, TCP, UDP, ARP, ICMP
+
+  Step 3: STOP CAPTURE
+    - Click the red square button
+    - All captured packets are listed chronologically
+
+  Step 4: APPLY DISPLAY FILTERS
+    - Type protocol name in filter bar (e.g., "dns")
+    - Only matching packets are shown
+    - Multiple filters: "dns || http" (DNS or HTTP)
+    - Specific host: "ip.addr == 8.8.8.8"
+
+  Step 5: PACKET INSPECTION
+    - Click any packet in the list
+    - Middle pane shows protocol tree (expand each layer)
+    - Bottom pane shows raw hex bytes
+    - Each layer maps to an OSI model layer
+
+
+4. PROTOCOL HEADER DETAILS
+============================================================
+
+  A) ETHERNET FRAME HEADER (Layer 2):
+     ┌──────────────┬──────────────┬───────────┐
+     │ Dst MAC (6B) │ Src MAC (6B) │ Type (2B) │
+     └──────────────┴──────────────┴───────────┘
+     Type: 0x0800 = IPv4, 0x0806 = ARP, 0x86DD = IPv6
+
+  B) IPv4 HEADER (Layer 3, 20 bytes minimum):
+     ┌─────────┬─────────┬──────────┬──────────┐
+     │ Version │ IHL     │ Total Len│ TTL      │
+     ├─────────┼─────────┼──────────┼──────────┤
+     │Protocol │Checksum │ Src IP   │ Dst IP   │
+     └─────────┴─────────┴──────────┴──────────┘
+     Protocol: 1=ICMP, 6=TCP, 17=UDP
+
+  C) TCP HEADER (Layer 4, 20 bytes minimum):
+     ┌───────────┬───────────┐
+     │ Src Port  │ Dst Port  │
+     ├───────────┴───────────┤
+     │   Sequence Number     │
+     ├───────────────────────┤
+     │   Ack Number          │
+     ├───────────┬───────────┤
+     │ Offset    │   Flags   │  (SYN,ACK,FIN,RST,PSH)
+     ├───────────┼───────────┤
+     │ Window    │ Checksum  │
+     └───────────┴───────────┘
+
+  D) UDP HEADER (Layer 4, 8 bytes):
+     ┌───────────┬───────────┐
+     │ Src Port  │ Dst Port  │
+     ├───────────┼───────────┤
+     │ Length    │ Checksum  │
+     └───────────┴───────────┘
+
+  E) ARP HEADER (Layer 2):
+     ┌──────────────┬──────────────┐
+     │ HW Type (1)  │ Proto (0x800)│
+     ├──────────────┼──────────────┤
+     │ Opcode       │ Sender MAC   │
+     ├──────────────┼──────────────┤
+     │ Sender IP    │ Target MAC   │
+     ├──────────────┼──────────────┤
+     │ Target IP    │              │
+     └──────────────┴──────────────┘
+     Opcode: 1=Request, 2=Reply
+
+
+5. WIRESHARK DISPLAY FILTERS REFERENCE
+============================================================
+
+  PROTOCOL FILTERS:
+    dns                         → All DNS packets
+    http                        → All HTTP packets
+    tcp                         → All TCP packets
+    udp                         → All UDP packets
+    arp                         → All ARP packets
+    icmp                        → All ICMP packets
+
+  ADDRESS FILTERS:
+    ip.addr == 8.8.8.8         → Packets to/from this IP
+    ip.src == 192.168.1.1      → Packets FROM this IP
+    ip.dst == 10.0.0.1         → Packets TO this IP
+    eth.addr == aa:bb:cc:dd:ee → By MAC address
+
+  PORT FILTERS:
+    tcp.port == 80             → HTTP traffic
+    tcp.port == 443            → HTTPS traffic
+    udp.port == 53             → DNS traffic
+
+  FLAG FILTERS:
+    tcp.flags.syn == 1         → TCP SYN packets
+    tcp.flags.fin == 1         → TCP FIN packets
+    tcp.flags.ack == 1         → TCP ACK packets
+
+  COMBINED FILTERS:
+    dns || http                → DNS or HTTP
+    tcp && ip.addr == 8.8.8.8 → TCP to/from Google DNS
+    !arp                       → Everything except ARP
+
+
+6. OSI MODEL MAPPING
+============================================================
+
+  ┌───────┬────────────────┬──────────────┬──────────────┐
+  │ Layer │ Name           │ Protocols    │ PDU          │
+  ├───────┼────────────────┼──────────────┼──────────────┤
+  │   7   │ Application    │ DNS, HTTP    │ Data         │
+  │   6   │ Presentation   │ SSL/TLS      │ Data         │
+  │   5   │ Session        │ NetBIOS      │ Data         │
+  │   4   │ Transport      │ TCP, UDP     │ Segment/     │
+  │       │                │              │ Datagram     │
+  │   3   │ Network        │ IP, ICMP     │ Packet       │
+  │   2   │ Data Link      │ ARP, Ethernet│ Frame        │
+  │   1   │ Physical       │ Bits         │ Bits         │
+  └───────┴────────────────┴──────────────┴──────────────┘
+
+  PDU = Protocol Data Unit (name for data at each layer)
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: Install required tools:
+    $ sudo apt update
+    $ sudo apt install wireshark curl dnsutils traceroute net-tools -y
+
+  Step 2: Allow non-root Wireshark capture:
+    $ sudo usermod -aG wireshark $USER
+    (Log out and log back in for changes to take effect)
+
+  Step 3: Open Wireshark and start capturing:
+    $ wireshark &
+    - Select your network interface (eth0, wlan0, or "any")
+    - Click the blue shark fin button to START capture
+
+  Step 4: In a SECOND terminal, navigate and run the script:
+    $ cd ~/Desktop/CN\ LAB/Packet\ analysis\ using\ a\ packet\ tracer\ tool/
+    $ chmod +x generate_traffic.sh
+    $ ./generate_traffic.sh
+
+  Step 5: Go back to Wireshark:
+    - Click the red square to STOP capture
+    - Use these filters to analyze each protocol:
+        dns    → DNS packets
+        http   → HTTP packets
+        tcp    → TCP packets
+        udp    → UDP packets
+        arp    → ARP packets
+        icmp   → ICMP (ping) packets
+
+  Step 6: Save the capture for your lab report:
+    File → Save As → packet_analysis.pcapng
+
+  Note: You need an internet connection for traffic generation.
+  Note: If Wireshark doesn't open, try: sudo wireshark &
+
+============================================================

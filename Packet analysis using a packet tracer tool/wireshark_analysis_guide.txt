@@ -1,0 +1,376 @@
+============================================================
+   PACKET ANALYSIS USING WIRESHARK - Detailed Lab Guide
+   Computer Networks Lab
+============================================================
+
+OBJECTIVE:
+  Capture and analyze network packets using Wireshark across
+  multiple protocols and OSI layers:
+    - Application Layer : DNS, HTTP
+    - Transport Layer   : TCP, UDP
+    - Network Layer     : IP, ICMP
+    - Data Link Layer   : ARP
+
+
+============================================================
+SETUP: INSTALL WIRESHARK
+============================================================
+
+  sudo apt update
+  sudo apt install wireshark curl dnsutils traceroute net-tools -y
+  sudo usermod -aG wireshark $USER
+
+  Log out and log back in for group changes.
+
+
+============================================================
+HOW TO CAPTURE:
+============================================================
+
+  1. Open Wireshark:     $ wireshark &
+  2. Select interface:   eth0 / wlan0 / any
+  3. Click blue shark fin to START capture
+  4. Run:                ./generate_traffic.sh
+  5. Click red square to STOP capture
+  6. Apply filters from sections below to analyze
+
+
+############################################################
+#                                                          #
+#              PROTOCOL-WISE DETAILED ANALYSIS             #
+#                                                          #
+############################################################
+
+
+============================================================
+1. DNS PACKET ANALYSIS (Application Layer)
+============================================================
+
+  WIRESHARK FILTER:  dns
+
+  OSI LAYER:         Layer 7 (Application)
+  TRANSPORT:         UDP, Port 53
+  PURPOSE:           Resolves domain names to IP addresses
+
+  PACKET STRUCTURE (expand in Wireshark):
+  ┌─────────────────────────────────────────────────────────┐
+  │ Ethernet II  → Src MAC, Dst MAC                        │
+  │ IPv4         → Src IP (your PC), Dst IP (DNS server)   │
+  │ UDP          → Src Port (random), Dst Port (53)        │
+  │ DNS          → Query/Response details                  │
+  └─────────────────────────────────────────────────────────┘
+
+  DNS HEADER FIELDS:
+    - Transaction ID  : Matches request to response
+    - Flags:
+        QR     = 0 (Query) / 1 (Response)
+        Opcode = 0 (Standard query)
+        RD     = 1 (Recursion Desired)
+        RA     = 1 (Recursion Available, in response)
+    - Questions       : Number of queries (usually 1)
+    - Answer RRs      : Number of answers (in response)
+
+  DNS QUERY SECTION:
+    - Name  : google.com
+    - Type  : A (1), MX (15), SOA (6), AAAA (28)
+    - Class : IN (Internet)
+
+  DNS ANSWER SECTION (Response only):
+    - Name  : google.com
+    - Type  : A
+    - TTL   : 300 (seconds to cache)
+    - Data  : 142.250.x.x (resolved IP)
+
+  KEY OBSERVATIONS:
+    ✓ DNS uses UDP (fast, small packets)
+    ✓ Query and Response have the SAME Transaction ID
+    ✓ Response is larger than Query (contains answer data)
+    ✓ Port 53 is always the destination in queries
+
+
+============================================================
+2. HTTP PACKET ANALYSIS (Application Layer)
+============================================================
+
+  WIRESHARK FILTER:  http
+
+  OSI LAYER:         Layer 7 (Application)
+  TRANSPORT:         TCP, Port 80
+  PURPOSE:           Web page request and delivery
+
+  PACKET STRUCTURE:
+  ┌─────────────────────────────────────────────────────────┐
+  │ Ethernet II  → MAC addresses                           │
+  │ IPv4         → Src/Dst IP                              │
+  │ TCP          → Src Port (random), Dst Port (80)        │
+  │ HTTP         → Request/Response                        │
+  └─────────────────────────────────────────────────────────┘
+
+  HTTP REQUEST (Client → Server):
+    - Method   : GET / POST / HEAD / PUT / DELETE
+    - URI      : / (root path)
+    - Version  : HTTP/1.1
+    - Host     : example.com
+    - Headers  : User-Agent, Accept, Connection
+
+    Example:
+      GET / HTTP/1.1
+      Host: example.com
+      User-Agent: curl/7.81.0
+      Accept: */*
+
+  HTTP RESPONSE (Server → Client):
+    - Status   : 200 OK / 301 Redirect / 404 Not Found
+    - Headers  : Content-Type, Content-Length, Server, Date
+    - Body     : HTML content of the page
+
+    Example:
+      HTTP/1.1 200 OK
+      Content-Type: text/html; charset=UTF-8
+      Content-Length: 1256
+
+  KEY OBSERVATIONS:
+    ✓ HTTP runs over TCP (reliable delivery needed)
+    ✓ Request-Response model (client asks, server replies)
+    ✓ You can see the FULL HTML content in the packet body
+    ✓ Follow TCP Stream (Right-click → Follow → TCP Stream)
+      to see the complete HTTP conversation
+
+
+============================================================
+3. TCP PACKET ANALYSIS (Transport Layer)
+============================================================
+
+  WIRESHARK FILTER:  tcp
+
+  OSI LAYER:         Layer 4 (Transport)
+  PURPOSE:           Reliable, connection-oriented data transfer
+
+  PACKET STRUCTURE:
+  ┌─────────────────────────────────────────────────────────┐
+  │ Ethernet II  → MAC addresses                           │
+  │ IPv4         → Src/Dst IP                              │
+  │ TCP          → Full TCP header                         │
+  └─────────────────────────────────────────────────────────┘
+
+  TCP HEADER FIELDS:
+    - Source Port      : Client's port (e.g., 54321)
+    - Destination Port : Server's port (e.g., 80)
+    - Sequence Number  : Byte position in the stream
+    - Ack Number       : Next expected byte from other side
+    - Flags:
+        SYN = Synchronize (connection setup)
+        ACK = Acknowledgment
+        FIN = Finish (connection teardown)
+        RST = Reset (abort connection)
+        PSH = Push (deliver data immediately)
+    - Window Size      : Flow control (receive buffer)
+    - Checksum         : Error detection
+
+  THREE-WAY HANDSHAKE (filter: tcp.flags.syn==1):
+    ┌──────────┐                    ┌──────────┐
+    │  Client  │                    │  Server  │
+    └────┬─────┘                    └────┬─────┘
+         │──── SYN (seq=0) ────────────→│   Step 1
+         │                              │
+         │←── SYN-ACK (seq=0,ack=1) ───│   Step 2
+         │                              │
+         │──── ACK (seq=1,ack=1) ──────→│   Step 3
+         │                              │
+         │     CONNECTION ESTABLISHED    │
+
+  FOUR-WAY TERMINATION (filter: tcp.flags.fin==1):
+    ┌──────────┐                    ┌──────────┐
+    │  Client  │                    │  Server  │
+    └────┬─────┘                    └────┬─────┘
+         │──── FIN-ACK ────────────────→│   Step 1
+         │←── ACK ─────────────────────│   Step 2
+         │←── FIN-ACK ─────────────────│   Step 3
+         │──── ACK ────────────────────→│   Step 4
+
+  KEY OBSERVATIONS:
+    ✓ Every TCP connection starts with 3-way handshake
+    ✓ Sequence numbers track data bytes
+    ✓ ACK confirms receipt of data
+    ✓ Window size controls flow (prevents flooding)
+
+
+============================================================
+4. UDP PACKET ANALYSIS (Transport Layer)
+============================================================
+
+  WIRESHARK FILTER:  udp
+
+  OSI LAYER:         Layer 4 (Transport)
+  PURPOSE:           Fast, connectionless data transfer
+
+  PACKET STRUCTURE:
+  ┌─────────────────────────────────────────────────────────┐
+  │ Ethernet II  → MAC addresses                           │
+  │ IPv4         → Src/Dst IP                              │
+  │ UDP          → Simple 8-byte header                    │
+  └─────────────────────────────────────────────────────────┘
+
+  UDP HEADER FIELDS (only 4 fields, 8 bytes total):
+    - Source Port      : Sender's port
+    - Destination Port : Receiver's port (e.g., 53 for DNS)
+    - Length           : Total UDP packet length
+    - Checksum         : Error detection (optional in IPv4)
+
+  TCP vs UDP COMPARISON:
+    +------------------+------------------+------------------+
+    | Feature          | TCP              | UDP              |
+    +------------------+------------------+------------------+
+    | Connection       | Connection-based | Connectionless   |
+    | Reliability      | Guaranteed       | Best-effort      |
+    | Ordering         | In-order         | No ordering      |
+    | Header Size      | 20-60 bytes      | 8 bytes          |
+    | Handshake        | 3-way            | None             |
+    | Speed            | Slower           | Faster           |
+    | Use Cases        | HTTP, FTP, SSH   | DNS, Video, VoIP |
+    +------------------+------------------+------------------+
+
+  KEY OBSERVATIONS:
+    ✓ UDP header is MUCH smaller than TCP (8 vs 20+ bytes)
+    ✓ No handshake — data sent immediately
+    ✓ No sequence numbers or acknowledgments
+    ✓ DNS uses UDP for fast lookups
+
+
+============================================================
+5. ARP PACKET ANALYSIS (Data Link Layer)
+============================================================
+
+  WIRESHARK FILTER:  arp
+
+  OSI LAYER:         Layer 2 (Data Link)
+  PURPOSE:           Maps IP addresses to MAC addresses
+
+  PACKET STRUCTURE:
+  ┌─────────────────────────────────────────────────────────┐
+  │ Ethernet II  → Src MAC, Dst MAC (broadcast for request)│
+  │ ARP          → Request or Reply                        │
+  └─────────────────────────────────────────────────────────┘
+
+  ARP HEADER FIELDS:
+    - Hardware Type    : 1 (Ethernet)
+    - Protocol Type    : 0x0800 (IPv4)
+    - Opcode           : 1 (Request) / 2 (Reply)
+    - Sender MAC       : MAC of the requester
+    - Sender IP        : IP of the requester
+    - Target MAC       : 00:00:00:00:00:00 (unknown in request)
+    - Target IP        : IP being resolved
+
+  ARP WORKFLOW:
+    ┌──────────┐                    ┌──────────┐
+    │ Host A   │                    │ Host B   │
+    │ 10.0.0.1 │                    │ 10.0.0.2 │
+    └────┬─────┘                    └────┬─────┘
+         │                              │
+         │── ARP Request (broadcast) ──→│  "Who has 10.0.0.2?"
+         │   Dst MAC: ff:ff:ff:ff:ff:ff │
+         │                              │
+         │←── ARP Reply (unicast) ─────│  "10.0.0.2 is at AA:BB:CC:DD:EE:FF"
+         │                              │
+
+  KEY OBSERVATIONS:
+    ✓ ARP Request is BROADCAST (dst MAC = ff:ff:ff:ff:ff:ff)
+    ✓ ARP Reply is UNICAST (directly to requester)
+    ✓ No IP header — ARP operates below the Network layer
+    ✓ ARP table caches results: check with "arp -a"
+
+
+============================================================
+6. IP PACKET ANALYSIS (Network Layer)
+============================================================
+
+  WIRESHARK FILTER:  ip.addr == <IP_ADDRESS>
+                     icmp  (for ping packets)
+
+  OSI LAYER:         Layer 3 (Network)
+  PURPOSE:           Logical addressing and routing
+
+  PACKET STRUCTURE:
+  ┌─────────────────────────────────────────────────────────┐
+  │ Ethernet II  → MAC addresses                           │
+  │ IPv4         → Full IP header                          │
+  │ ICMP/TCP/UDP → Upper layer protocol                    │
+  └─────────────────────────────────────────────────────────┘
+
+  IP HEADER FIELDS:
+    - Version          : 4 (IPv4)
+    - Header Length     : 20 bytes (minimum)
+    - Total Length      : Entire packet size
+    - TTL              : Time to Live (decrements each hop)
+    - Protocol         : 1 (ICMP), 6 (TCP), 17 (UDP)
+    - Source IP        : Sender's IP address
+    - Destination IP   : Receiver's IP address
+    - Checksum         : Header error detection
+
+  ICMP (Ping) ANALYSIS (filter: icmp):
+    - Type 8  : Echo Request  (ping sent)
+    - Type 0  : Echo Reply    (ping response)
+    - Code    : 0
+    - Sequence: Increments with each ping
+
+  KEY OBSERVATIONS:
+    ✓ TTL decreases by 1 at each router hop
+    ✓ Protocol field tells what's inside (TCP=6, UDP=17)
+    ✓ Ping uses ICMP (part of IP layer, not TCP/UDP)
+    ✓ Use "ip.addr == x.x.x.x" to filter by specific host
+
+
+############################################################
+#                                                          #
+#              USEFUL WIRESHARK FILTERS SUMMARY            #
+#                                                          #
+############################################################
+
+  +------------------------------+-----------------------------+
+  | Filter                       | Shows                       |
+  +------------------------------+-----------------------------+
+  | dns                          | All DNS packets             |
+  | http                         | All HTTP packets            |
+  | tcp                          | All TCP packets             |
+  | udp                          | All UDP packets             |
+  | arp                          | All ARP packets             |
+  | icmp                         | All ICMP (ping) packets     |
+  | ip.addr == 8.8.8.8          | Packets to/from Google DNS  |
+  | tcp.port == 80              | HTTP traffic                |
+  | tcp.port == 443             | HTTPS traffic               |
+  | udp.port == 53              | DNS traffic                 |
+  | tcp.flags.syn == 1          | TCP SYN (handshake start)   |
+  | tcp.flags.fin == 1          | TCP FIN (connection end)    |
+  | http.request                 | HTTP requests only          |
+  | http.response                | HTTP responses only         |
+  | dns.qry.name == "google.com"| DNS queries for google.com  |
+  +------------------------------+-----------------------------+
+
+  RIGHT-CLICK TIPS:
+    → Follow → TCP Stream   : See full conversation
+    → Follow → UDP Stream   : See full UDP exchange
+    → Apply as Filter       : Quick filter by selected field
+    → Decode As             : Force decode a protocol
+
+
+############################################################
+#                                                          #
+#                OSI MODEL LAYER MAPPING                   #
+#                                                          #
+############################################################
+
+  +-------+----------------+------------------+-------------+
+  | Layer | Name           | Protocols        | Wireshark   |
+  +-------+----------------+------------------+-------------+
+  |   7   | Application    | DNS, HTTP        | dns, http   |
+  |   6   | Presentation   | SSL/TLS          | tls         |
+  |   5   | Session        | NetBIOS          | nbns        |
+  |   4   | Transport      | TCP, UDP         | tcp, udp    |
+  |   3   | Network        | IP, ICMP         | ip, icmp    |
+  |   2   | Data Link      | ARP, Ethernet    | arp, eth    |
+  |   1   | Physical       | (bits on wire)   | frame       |
+  +-------+----------------+------------------+-------------+
+
+============================================================
+  Save your capture: File → Save As → packet_analysis.pcapng
+============================================================

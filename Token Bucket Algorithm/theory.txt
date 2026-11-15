@@ -1,0 +1,238 @@
+============================================================
+   TOKEN BUCKET ALGORITHM - Theory and Working
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+The Token Bucket Algorithm is a traffic shaping mechanism
+that controls the rate of data transmission while ALLOWING
+SHORT BURSTS of traffic. It is more flexible than the
+Leaky Bucket Algorithm.
+
+Analogy:
+  Imagine a bucket that collects tokens at a steady rate:
+  - Tokens are added to the bucket at a FIXED rate
+  - Each packet needs ONE token to be transmitted
+  - If tokens available → packet is sent (token consumed)
+  - If no tokens → packet is dropped or queued
+  - If idle, tokens ACCUMULATE for future burst use
+
+Purpose:
+  - Controls average transmission rate
+  - ALLOWS short bursts (unlike Leaky Bucket)
+  - Provides flexible traffic shaping
+  - Used in modern network QoS and API rate limiting
+
+Key properties:
+  - Token rate: Constant rate of token generation
+  - Bucket size: Maximum tokens that can be stored
+  - Output rate: Variable (can burst up to available tokens)
+  - Idle benefit: Unused capacity is SAVED as tokens
+
+Where it is used:
+  - Linux Traffic Control (tc command)
+  - API rate limiting (Google, AWS, GitHub APIs)
+  - Network QoS (Quality of Service)
+  - IETF standards (RFC 2697, RFC 2698)
+
+
+2. ALGORITHM
+============================================================
+
+  At each time tick:
+
+  1. ADD tokens at fixed rate:
+       tokens += token_rate
+
+  2. CAP tokens at bucket capacity:
+       if tokens > bucket_size:
+           tokens = bucket_size
+
+  3. FOR each incoming packet:
+       IF tokens > 0:
+           → SEND the packet
+           → tokens -= 1 (consume one token)
+       ELSE:
+           → DROP the packet (no tokens available)
+
+  Pseudocode:
+    for each time unit:
+        tokens = min(tokens + token_rate, bucket_size)
+        if incoming <= tokens:
+            sent = incoming
+            tokens -= sent
+            dropped = 0
+        else:
+            sent = tokens
+            dropped = incoming - tokens
+            tokens = 0
+
+
+3. WORKING (Step-by-Step)
+============================================================
+
+  Example: Bucket Size = 10, Token Rate = 4 tokens/tick
+
+  Time 1: 3 packets arrive
+    Tokens before: 0 + 4 = 4
+    Packets to send: 3 (need 3 tokens)
+    Tokens available: 4 ≥ 3 → Send ALL 3
+    Tokens after: 4 - 3 = 1
+    Dropped: 0
+
+  Time 2: 8 packets arrive
+    Tokens before: 1 + 4 = 5
+    Packets to send: 8 (need 8 tokens)
+    Tokens available: 5 < 8 → Send only 5
+    Tokens after: 0
+    Dropped: 8 - 5 = 3
+
+  Time 3: 1 packet arrives
+    Tokens before: 0 + 4 = 4
+    Packets to send: 1 (need 1 token)
+    Tokens available: 4 ≥ 1 → Send 1
+    Tokens after: 4 - 1 = 3
+    Dropped: 0
+    Note: 3 tokens SAVED for future burst!
+
+  Time 4: 0 packets arrive (idle)
+    Tokens before: 3 + 4 = 7
+    No packets to send
+    Tokens after: 7 (ACCUMULATED!)
+    These tokens can handle a burst later
+
+  Time 5: 10 packets arrive (BURST!)
+    Tokens before: 7 + 4 = 11 → capped to 10
+    Packets to send: 10 (need 10 tokens)
+    Tokens available: 10 ≥ 10 → Send ALL 10!
+    Tokens after: 0
+    Dropped: 0
+    The burst was handled thanks to saved tokens!
+
+
+4. VISUAL REPRESENTATION
+============================================================
+
+     Token Generator            Incoming Packets
+         │                          │ │ │
+         ▼ (constant rate)          ▼ ▼ ▼
+       ┌───────┐               ┌───────────┐
+       │ T T T │               │  Packets  │
+       │ T T   │ Token         │  waiting  │
+       │ T     │ Bucket        └─────┬─────┘
+       └───┬───┘ (max capacity)      │
+           │                         │
+           └─────────┬───────────────┘
+                     │
+                     ▼
+              ┌─────────────┐
+              │ Has token?  │
+              └──┬───────┬──┘
+            YES  │       │  NO
+                 ▼       ▼
+              SEND     DROP
+            (consume  (no token
+             token)   available)
+
+  Key differences from Leaky Bucket:
+  - Tokens accumulate during idle periods
+  - Output rate CAN exceed the token rate (burst!)
+  - More flexible and efficient
+
+
+5. KEY CONCEPTS
+============================================================
+
+  BURST ALLOWANCE:
+    - Maximum burst size = bucket_size
+    - During idle time, tokens accumulate up to bucket_size
+    - When burst arrives, all saved tokens can be used at once
+    - Average rate is still controlled by token_rate
+
+  TOKEN RATE vs OUTPUT RATE:
+    - Token rate: Constant (e.g., 4 tokens/tick)
+    - Output rate: Variable (0 to bucket_size per tick)
+    - Average output ≤ token rate (over long periods)
+    - Short-term output can EXCEED token rate (bursts)
+
+  PARAMETERS:
+    - Token Rate (r): How fast tokens are generated
+      Controls the long-term average transmission rate
+    - Bucket Size (B): Maximum tokens stored
+      Controls the maximum burst size
+
+  CONFORMING vs NON-CONFORMING:
+    - Conforming traffic: Has tokens → transmitted
+    - Non-conforming: No tokens → dropped or marked
+
+  ADVANTAGES:
+    ✓ Allows controlled bursts (more flexible)
+    ✓ Idle time is not wasted (tokens saved)
+    ✓ Better network utilization
+    ✓ Widely used in real-world systems
+
+  DISADVANTAGES:
+    ✗ Slightly more complex than Leaky Bucket
+    ✗ Bursts may cause short-term congestion
+    ✗ Requires token counter management
+
+  COMPARISON WITH LEAKY BUCKET:
+    ┌──────────────────┬──────────────────┬──────────────────┐
+    │ Feature          │ Leaky Bucket     │ Token Bucket     │
+    ├──────────────────┼──────────────────┼──────────────────┤
+    │ Output rate      │ Always constant  │ Variable (burst) │
+    │ Bursts allowed   │ No               │ Yes              │
+    │ Idle time        │ Wasted           │ Tokens saved     │
+    │ Max burst        │ N/A              │ = Bucket size    │
+    │ Average rate     │ = Leak rate      │ ≤ Token rate     │
+    │ Mechanism        │ Packets leak out │ Tokens consumed  │
+    │ Flexibility      │ Rigid            │ Flexible         │
+    │ Real-world use   │ ATM, policing    │ Linux QoS, APIs  │
+    └──────────────────┴──────────────────┴──────────────────┘
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: Open a terminal and navigate to the folder:
+    $ cd ~/Desktop/CN\ LAB/Token\ Bucket\ Algorithm/
+
+  Step 2: Compile the program:
+    $ gcc token_bucket.c -o token_bucket
+
+  Step 3: Run the program:
+    $ ./token_bucket
+
+  Step 4: Enter the inputs when prompted:
+    Enter token bucket size (max tokens): 10
+    Enter token arrival rate (tokens added per tick): 4
+    Use random traffic? (1=Yes, 0=No): 1
+
+    OR for manual input:
+    Use random traffic? (1=Yes, 0=No): 0
+    Time 1: 3
+    Time 2: 8
+    Time 3: 1
+    ... (enter 10 values)
+
+  Expected output:
+    ┌──────┬──────────┬────────┬──────────┬────────┬─────────┐
+    │ Time │ Incoming │ Tokens │ Packets  │ Tokens │ Dropped │
+    │      │ Packets  │ Avail  │ Sent     │ Left   │ Packets │
+    ├──────┼──────────┼────────┼──────────┼────────┼─────────┤
+    │   1  │      3   │    4   │      3   │    1   │     0   │
+    │   2  │      8   │    5   │      5   │    0   │     3   │
+    ...
+    Shows total received, sent, and dropped at the end.
+    Also displays a Leaky vs Token Bucket comparison table.
+
+  Note: Unlike Leaky Bucket, the "Packets Sent" column CAN
+        exceed the token rate when tokens have accumulated!
+
+============================================================

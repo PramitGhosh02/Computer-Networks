@@ -1,0 +1,219 @@
+============================================================
+   DNS ANALYSIS - Theory and Working
+   Application Layer Packet Analysis
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+DNS (Domain Name System) is an Application Layer protocol
+that translates human-readable domain names (like google.com)
+into IP addresses (like 142.250.190.14) that computers use.
+
+DNS is often called the "Phonebook of the Internet."
+
+Key characteristics:
+  - Application Layer protocol (Layer 7)
+  - Uses UDP port 53 (for queries, fast and lightweight)
+  - Uses TCP port 53 (for zone transfers, large responses)
+  - Hierarchical, distributed database
+  - Uses caching to reduce lookup time
+
+DNS Hierarchy:
+  ┌──────────────┐
+  │  Root (.)    │  → 13 root server clusters worldwide
+  └──────┬───────┘
+         │
+  ┌──────┴───────┐
+  │  TLD (.com)  │  → Top-Level Domain servers
+  └──────┬───────┘
+         │
+  ┌──────┴────────────┐
+  │ Auth (google.com) │  → Authoritative nameservers
+  └───────────────────┘
+
+DNS Resolution Process:
+  1. User types "google.com" in browser
+  2. Browser checks local cache
+  3. OS checks /etc/hosts file
+  4. Query sent to Recursive DNS Resolver (ISP)
+  5. Resolver queries Root server → gets TLD server
+  6. Resolver queries TLD server → gets Auth server
+  7. Resolver queries Auth server → gets IP address
+  8. IP address returned to browser
+  9. Browser connects to the IP address
+
+
+2. DNS RECORD TYPES
+============================================================
+
+  A RECORD (Address):
+    - Maps domain name → IPv4 address
+    - Example: google.com → 142.250.190.14
+    - Most common DNS record type
+    - Command: dig google.com A
+
+  AAAA RECORD (IPv6 Address):
+    - Maps domain name → IPv6 address
+    - Example: google.com → 2404:6800:4007:81a::200e
+    - Command: dig google.com AAAA
+
+  MX RECORD (Mail Exchange):
+    - Specifies mail servers for a domain
+    - Includes priority (lower = higher priority)
+    - Example: google.com MX 10 smtp.google.com
+    - Command: dig google.com MX
+    - Used by email systems to route mail
+
+  SOA RECORD (Start of Authority):
+    - Administrative information about a DNS zone
+    - Contains:
+        MNAME   : Primary nameserver
+        RNAME   : Admin email (@ replaced with .)
+        Serial  : Version number (incremented on changes)
+        Refresh : How often secondaries check for updates
+        Retry   : Wait time after failed refresh
+        Expire  : When secondary data becomes invalid
+        Min TTL : Minimum cache time for negative responses
+    - Command: dig google.com SOA
+
+  NS RECORD (Nameserver):
+    - Lists authoritative nameservers for a domain
+    - Command: dig google.com NS
+
+  CNAME RECORD (Canonical Name):
+    - Alias pointing to another domain name
+    - Example: www.google.com CNAME google.com
+
+  PTR RECORD (Pointer):
+    - Reverse DNS: maps IP address → domain name
+    - Command: nslookup <IP_ADDRESS>
+
+
+3. DNS COMMANDS AND WORKING
+============================================================
+
+  nslookup:
+    - Basic DNS query tool
+    - Syntax: nslookup [options] <domain>
+    - nslookup google.com          → A record
+    - nslookup -type=mx google.com → MX records
+    - nslookup -type=soa google.com → SOA record
+    - Shows: Server used, IP address resolved
+
+  dig (Domain Information Groper):
+    - Advanced DNS query tool
+    - Syntax: dig <domain> <record_type>
+    - dig google.com A     → A record with full details
+    - dig google.com MX    → Mail exchange records
+    - dig google.com SOA   → Start of Authority
+    - dig google.com +short → Concise output
+    - dig google.com +trace → Shows full resolution path
+    - Shows: Query time, TTL, flags, authority section
+
+  host:
+    - Simple DNS lookup utility
+    - Syntax: host [-t type] <domain>
+    - host google.com       → Basic lookup
+    - host -t MX google.com → MX records
+    - host -t SOA google.com → SOA record
+
+
+4. DNS PACKET STRUCTURE (Wireshark Analysis)
+============================================================
+
+  DNS Message Format:
+  ┌─────────────────────────────────────┐
+  │         HEADER (12 bytes)           │
+  │  Transaction ID, Flags, Counts     │
+  ├─────────────────────────────────────┤
+  │         QUESTION SECTION            │
+  │  Domain name, Type, Class          │
+  ├─────────────────────────────────────┤
+  │         ANSWER SECTION              │
+  │  Name, Type, TTL, Data (IP addr)   │
+  ├─────────────────────────────────────┤
+  │         AUTHORITY SECTION           │
+  │  Authoritative nameserver info     │
+  ├─────────────────────────────────────┤
+  │         ADDITIONAL SECTION          │
+  │  Extra helpful records             │
+  └─────────────────────────────────────┘
+
+  Header Flags:
+    QR     : 0 = Query, 1 = Response
+    Opcode : 0 = Standard query
+    AA     : Authoritative Answer
+    TC     : Truncated (response too large for UDP)
+    RD     : Recursion Desired
+    RA     : Recursion Available
+    RCODE  : 0 = No error, 3 = Name not found (NXDOMAIN)
+
+
+5. KEY CONCEPTS
+============================================================
+
+  TTL (Time To Live):
+    - How long (in seconds) a DNS record can be cached
+    - After TTL expires, a fresh lookup is required
+    - Shorter TTL = more DNS traffic, faster updates
+    - Longer TTL = less traffic, slower propagation
+
+  RECURSIVE vs ITERATIVE QUERIES:
+    - Recursive: Resolver does all the work for the client
+    - Iterative: Resolver returns referrals, client follows
+
+  DNS CACHING:
+    - Browser cache → OS cache → Resolver cache
+    - Reduces lookup time for repeated queries
+    - Controlled by TTL values
+
+  WHY UDP FOR DNS?
+    - DNS queries are small (fit in one UDP datagram)
+    - Speed matters (no handshake overhead)
+    - If response lost, client simply retries
+    - TCP used only for large responses (>512 bytes)
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: Install required tools (if not already installed):
+    $ sudo apt update
+    $ sudo apt install dnsutils -y
+
+  Step 2: Navigate to the folder:
+    $ cd ~/Desktop/CN\ LAB/Application\ layer\ Packet\ \(DNS\)/
+
+  Step 3: Make the script executable:
+    $ chmod +x dns_analysis.sh
+
+  Step 4: Run the script:
+    $ ./dns_analysis.sh
+
+  The script will automatically run:
+    - nslookup, dig, and host for A records
+    - MX record queries (mail servers)
+    - SOA record queries (authority info)
+    - NS record queries (nameservers)
+    - Reverse DNS lookup
+    - DNS trace
+
+  For Wireshark DNS analysis:
+    $ sudo apt install wireshark -y
+    $ wireshark &
+    (Select interface → Start capture → Filter: dns)
+    Then in another terminal run:
+    $ nslookup google.com
+    $ dig google.com MX
+    $ dig google.com SOA
+    Go back to Wireshark → Stop capture → Analyze packets.
+
+  Note: You need an internet connection for DNS queries.
+
+============================================================

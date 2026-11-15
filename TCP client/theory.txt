@@ -1,0 +1,170 @@
+============================================================
+   TCP CLIENT - Theory and Working
+   Computer Networks Lab
+============================================================
+
+
+1. THEORY
+============================================================
+
+A TCP Client is a program that initiates a connection to a
+TCP Server. It operates at the Transport Layer (Layer 4) of
+the OSI model using the Transmission Control Protocol.
+
+The client-server model:
+  - Server runs first and WAITS for connections (passive)
+  - Client initiates the connection (active)
+  - Once connected, both can send and receive data
+  - Either side can close the connection
+
+TCP Client responsibilities:
+  - Create a socket
+  - Specify the server's IP address and port
+  - Initiate a connection to the server
+  - Send data (requests) to the server
+  - Receive data (responses) from the server
+  - Close the connection when done
+
+Unlike the server, the client does NOT need:
+  - bind()   → OS assigns a random available port
+  - listen() → client is active, not passive
+  - accept() → client initiates, doesn't wait
+
+
+2. SOCKET API FUNCTIONS USED
+============================================================
+
+  socket()     → Creates a TCP socket (SOCK_STREAM)
+
+  inet_pton()  → Converts IP address from text ("127.0.0.1")
+                 to binary network format
+                 "pton" = Presentation TO Network
+
+  connect()    → Initiates the TCP 3-way handshake with server
+                 Blocks until connection is established or fails
+                 This is the CLIENT-specific function
+
+  send()       → Sends data to the server through the socket
+
+  read()       → Receives data (server's response) from socket
+
+  close()      → Closes the connection and frees the socket
+
+
+3. WORKING (Step-by-Step)
+============================================================
+
+  Step 1: CREATE SOCKET
+    - socket(AF_INET, SOCK_STREAM, 0)
+    - Same as server — creates a TCP socket
+    - Returns a file descriptor
+
+  Step 2: CONFIGURE SERVER ADDRESS
+    - Set sin_family = AF_INET (IPv4)
+    - Set sin_port = htons(8080) (server's port)
+    - inet_pton(AF_INET, "127.0.0.1", &addr)
+      Converts "127.0.0.1" (localhost) to binary
+
+  Step 3: CONNECT
+    - connect(sock_fd, server_address, size)
+    - Initiates the TCP 3-way handshake:
+        Client → Server : SYN
+        Server → Client : SYN-ACK
+        Client → Server : ACK
+    - Blocks until connection is established
+    - If server is not running, returns error
+
+  Step 4: SEND DATA
+    - send(sock_fd, message, length, 0)
+    - Sends "Hello from TCP Client!" to the server
+
+  Step 5: RECEIVE RESPONSE
+    - read(sock_fd, buffer, size)
+    - Reads the server's response into the buffer
+
+  Step 6: CLOSE
+    - close(sock_fd)
+    - Triggers TCP 4-way termination handshake
+
+
+4. FLOW DIAGRAM
+============================================================
+
+  CLIENT                              SERVER
+  ──────                              ──────
+  socket()                            socket()
+                                      bind()
+                                      listen()
+  connect() ─── SYN ───────────────→  accept()
+            ← ─ SYN-ACK ──────────
+            ─── ACK ───────────────→
+            CONNECTION ESTABLISHED
+  send()   ─── "Hello" ───────────→  read()
+  read()   ← ─ "Response" ────────  send()
+  close()  ─── FIN ───────────────→  close()
+
+
+5. KEY CONCEPTS
+============================================================
+
+  127.0.0.1 (LOCALHOST / LOOPBACK):
+    - Special IP address that refers to "this machine"
+    - Used for testing client-server on the same computer
+    - Traffic never leaves the machine
+    - Also accessible as "localhost"
+
+  inet_pton() vs inet_aton():
+    - inet_pton: Newer, supports both IPv4 and IPv6
+    - inet_aton: Older, IPv4 only
+    - "pton" = presentation to network
+    - Converts human-readable IP to binary format
+
+  connect() vs accept():
+    - connect() is used by CLIENT to initiate connection
+    - accept() is used by SERVER to receive connection
+    - They are complementary operations
+
+  CLIENT PORT:
+    - The OS automatically assigns a random ephemeral port
+      (usually 49152-65535) to the client
+    - No need to call bind() on the client side
+
+  BLOCKING CALLS:
+    - connect() blocks until server accepts or timeout
+    - read() blocks until data arrives from server
+    - This is synchronous (blocking) I/O
+
+============================================================
+
+
+============================================================
+   HOW TO RUN (Ubuntu Terminal)
+============================================================
+
+  Step 1: First, start the TCP server in one terminal:
+    $ cd ~/Desktop/CN\ LAB/TCP\ server/
+    $ gcc tcp_server.c -o tcp_server
+    $ ./tcp_server
+
+  Step 2: Open a SECOND terminal for the client:
+    $ cd ~/Desktop/CN\ LAB/TCP\ client/
+
+  Step 3: Compile the client program:
+    $ gcc tcp_client.c -o tcp_client
+
+  Step 4: Run the client:
+    $ ./tcp_client
+
+  Expected output (Client terminal):
+    TCP Client socket created successfully.
+    Connecting to server at 127.0.0.1:8080...
+    Connected to server successfully!
+    Message sent to server: "Hello from TCP Client!"
+    Response from server : "Hello from TCP Server! Message received."
+    Closing connection...
+    TCP Client shut down successfully.
+
+  Note: The TCP server MUST be running before you start
+        the client, otherwise connect() will fail.
+
+============================================================
