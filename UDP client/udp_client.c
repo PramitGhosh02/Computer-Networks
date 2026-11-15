@@ -20,12 +20,18 @@
 #define PORT 9090
 #define BUFFER_SIZE 1024
 
-int main() {
+int main(int argc, char *argv[]) {
     int sock_fd;
     struct sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
     char buffer[BUFFER_SIZE] = {0};
     char message[BUFFER_SIZE] = {0};
+    char *server_ip = "127.0.0.1"; /* Default: localhost */
+
+    /* Accept Server IP as command-line argument (e.g., ./udp_client 192.168.1.15) */
+    if (argc > 1) {
+        server_ip = argv[1];
+    }
 
     /* Step 1: Create a UDP socket (SOCK_DGRAM) */
     sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -41,13 +47,13 @@ int main() {
     server_addr.sin_port = htons(PORT);     /* Server port */
 
     /* Convert IP address from text to binary form */
-    if (inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr) <= 0) {
-        perror("Invalid address / Address not supported");
+    if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
+        fprintf(stderr, "Invalid IP address: %s\n", server_ip);
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
 
-    printf("Ready to send datagrams to 127.0.0.1:%d\n", PORT);
+    printf("Ready to send datagrams to %s:%d\n", server_ip, PORT);
     printf("Type your messages below (type 'exit' to quit):\n");
     printf("===================================================\n\n");
 

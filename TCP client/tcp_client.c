@@ -18,11 +18,17 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
-int main() {
+int main(int argc, char *argv[]) {
     int sock_fd;
     struct sockaddr_in server_address;
     char buffer[BUFFER_SIZE] = {0};
     char message[BUFFER_SIZE] = {0};
+    char *server_ip = "127.0.0.1"; /* Default: localhost */
+
+    /* Accept Server IP as command-line argument (e.g., ./tcp_client 192.168.1.15) */
+    if (argc > 1) {
+        server_ip = argv[1];
+    }
 
     /* Step 1: Create a TCP socket */
     sock_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -37,14 +43,14 @@ int main() {
     server_address.sin_port = htons(PORT);     /* Server port */
 
     /* Convert IP address from text to binary form */
-    if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
-        perror("Invalid address / Address not supported");
+    if (inet_pton(AF_INET, server_ip, &server_address.sin_addr) <= 0) {
+        fprintf(stderr, "Invalid IP address: %s\n", server_ip);
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
 
     /* Step 3: Connect to the server */
-    printf("Connecting to server at 127.0.0.1:%d...\n", PORT);
+    printf("Connecting to server at %s:%d...\n", server_ip, PORT);
     if (connect(sock_fd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         perror("Connection failed");
         close(sock_fd);
