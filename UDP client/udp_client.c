@@ -1,16 +1,12 @@
 /*
  * UDP Client - Computer Networks Lab
  * 
- * This program demonstrates a UDP (User Datagram Protocol) client
- * that sends a datagram to a UDP server and receives a response.
+ * Continuous communication UDP Client.
+ * Continuously takes input from the user, sends datagrams to the
+ * UDP server at port 9090, and receives acknowledgments until the
+ * user types "exit" or closes the window.
  *
  * Transport Layer Protocol: UDP (connectionless, unreliable, fast)
- *
- * Key difference from TCP client:
- *   - No connect() needed (connectionless)
- *   - Uses sendto() and recvfrom() instead of send/read
- *
- * Run the UDP server first, then run this client.
  */
 
 #include <stdio.h>
@@ -29,9 +25,9 @@ int main() {
     struct sockaddr_in server_addr;
     socklen_t server_len = sizeof(server_addr);
     char buffer[BUFFER_SIZE] = {0};
-    char *message = "Hello from UDP Client!";
+    char message[BUFFER_SIZE] = {0};
 
-    /* Step 1: Create a UDP socket (SOCK_DGRAM for datagrams) */
+    /* Step 1: Create a UDP socket (SOCK_DGRAM) */
     sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock_fd < 0) {
         perror("Socket creation failed");
@@ -51,22 +47,51 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    /* No connect() needed — UDP is connectionless! */
+    printf("Ready to send datagrams to 127.0.0.1:%d\n", PORT);
+    printf("Type your messages below (type 'exit' to quit):\n");
+    printf("===================================================\n\n");
 
-    /* Step 3: Send a datagram to the server */
-    printf("Sending datagram to server at 127.0.0.1:%d...\n", PORT);
-    sendto(sock_fd, message, strlen(message), 0,
-           (struct sockaddr *)&server_addr, server_len);
-    printf("Message sent to server: \"%s\"\n", message);
+    /* Step 3: Continuous communication loop */
+    while (1) {
+        printf("Enter message: ");
+        memset(message, 0, BUFFER_SIZE);
+        if (fgets(message, BUFFER_SIZE, stdin) == NULL) {
+            break;
+        }
 
-    /* Step 4: Receive the server's response */
-    int n = recvfrom(sock_fd, buffer, BUFFER_SIZE, 0,
-                     (struct sockaddr *)&server_addr, &server_len);
-    buffer[n] = '\0';
-    printf("Response from server : \"%s\"\n", buffer);
+        /* Remove trailing newline character */
+        message[strcspn(message, "\r\n")] = 0;
 
-    /* Step 5: Close the socket */
-    printf("\nClosing client...\n");
+        /* Skip empty messages */
+        if (strlen(message) == 0) {
+            continue;
+        }
+
+        /* Check for exit command */
+        if (strcmp(message, "exit") == 0) {
+            sendto(sock_fd, message, strlen(message), 0,
+                   (struct sockaddr *)&server_addr, server_len);
+            printf("Exiting UDP client...\n");
+            break;
+        }
+
+        /* Send datagram to server */
+        sendto(sock_fd, message, strlen(message), 0,
+               (struct sockaddr *)&server_addr, server_len);
+        printf("Datagram sent to server: \"%s\"\n", message);
+
+        /* Receive server response */
+        memset(buffer, 0, BUFFER_SIZE);
+        int n = recvfrom(sock_fd, buffer, BUFFER_SIZE - 1, 0,
+                         (struct sockaddr *)&server_addr, &server_len);
+        if (n > 0) {
+            buffer[n] = '\0';
+            printf("Response from server   : \"%s\"\n\n", buffer);
+        }
+    }
+
+    /* Step 4: Close socket */
+    printf("\nClosing UDP client...\n");
     close(sock_fd);
 
     printf("UDP Client shut down successfully.\n");

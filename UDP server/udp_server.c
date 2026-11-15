@@ -1,15 +1,12 @@
 /*
  * UDP Server - Computer Networks Lab
  * 
- * This program demonstrates a UDP (User Datagram Protocol) server
- * that receives datagrams from clients and sends back responses.
+ * Continuous communication UDP Server.
+ * Listens on port 9090 and continuously receives datagrams in a loop
+ * from clients, sending acknowledgments until client sends "exit"
+ * or server is stopped.
  *
  * Transport Layer Protocol: UDP (connectionless, unreliable, fast)
- *
- * Key difference from TCP:
- *   - No connection setup (no listen/accept)
- *   - Uses recvfrom() and sendto() instead of read/send
- *   - Each message is an independent datagram
  */
 
 #include <stdio.h>
@@ -28,15 +25,23 @@ int main() {
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);
     char buffer[BUFFER_SIZE] = {0};
-    char *response = "Hello from UDP Server! Datagram received.";
+    char response[BUFFER_SIZE * 2] = {0};
+    int opt = 1;
 
-    /* Step 1: Create a UDP socket (SOCK_DGRAM for datagrams) */
+    /* Step 1: Create a UDP socket (SOCK_DGRAM) */
     server_fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (server_fd < 0) {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
     printf("UDP Server socket created successfully.\n");
+
+    /* Prevent "Address already in use" on restart */
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("setsockopt failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
 
     /* Step 2: Configure the server address structure */
     memset(&server_addr, 0, sizeof(server_addr));
@@ -52,30 +57,39 @@ int main() {
     }
     printf("Socket bound to port %d.\n", PORT);
 
-    /* No listen() or accept() needed — UDP is connectionless! */
-
+    /* UDP is connectionless — no listen() or accept() */
     printf("UDP Server is running on port %d...\n", PORT);
-    printf("Waiting for a datagram from client...\n");
+    printf("Ready to receive continuous datagrams...\n\n");
 
-    /* Step 4: Receive a datagram from the client */
-    int n = recvfrom(server_fd, buffer, BUFFER_SIZE, 0,
-                     (struct sockaddr *)&client_addr, &client_len);
-    buffer[n] = '\0';
+    /* Step 4: Continuous communication loop */
+    while (1) {
+        memset(buffer, 0, BUFFER_SIZE);
+        int n = recvfrom(server_fd, buffer, BUFFER_SIZE - 1, 0,
+                         (struct sockaddr *)&client_addr, &client_len);
+        if (n <= 0) {
+            continue;
+        }
+        buffer[n] = '\0';
 
-    printf("\n========================================\n");
-    printf("Datagram received!\n");
-    printf("Client IP  : %s\n", inet_ntoa(client_addr.sin_addr));
-    printf("Client Port: %d\n", ntohs(client_addr.sin_port));
-    printf("========================================\n\n");
-    printf("Message from client: \"%s\"\n", buffer);
+        /* Check for exit command */
+        if (strncmp(buffer, "exit", 4) == 0) {
+            printf("\nClient at %s:%d requested termination (exit).\n",
+                   inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+            break;
+        }
 
-    /* Step 5: Send a response back to the client */
-    sendto(server_fd, response, strlen(response), 0,
-           (struct sockaddr *)&client_addr, client_len);
-    printf("Response sent to client: \"%s\"\n", response);
+        printf("Datagram from [%s:%d]: \"%s\"\n",
+               inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), buffer);
+
+        /* Step 5: Send acknowledgment response back to client */
+        snprintf(response, sizeof(response), "UDP Server ACK: Received '%s'", buffer);
+        sendto(server_fd, response, strlen(response), 0,
+               (struct sockaddr *)&client_addr, client_len);
+        printf("ACK sent back to client: \"%s\"\n\n", response);
+    }
 
     /* Step 6: Close the socket */
-    printf("\nClosing server...\n");
+    printf("Closing UDP server...\n");
     close(server_fd);
 
     printf("UDP Server shut down successfully.\n");

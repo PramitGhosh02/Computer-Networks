@@ -84,16 +84,15 @@ A UDP Server:
     - Associates socket with port 9090
     - Server is now ready to receive datagrams
 
-  Step 4: RECEIVE DATAGRAM (No listen/accept!)
-    - recvfrom(server_fd, buffer, size, 0, client_addr, &len)
-    - Blocks until a datagram arrives
-    - Fills client_addr with sender's IP and port
-    - This is the key difference from TCP
+  Step 4: CONTINUOUS RECEIVE LOOP
+    - while(1) loop receives datagrams using recvfrom()
+    - recvfrom() fills client_addr with sender's IP and port
+    - Checks for "exit" command
+    - Prints received message
 
-  Step 5: SEND RESPONSE
+  Step 5: SEND ACKNOWLEDGMENT
     - sendto(server_fd, response, length, 0, client_addr, len)
-    - Sends response TO the client's address
-    - Must specify destination (no connection exists)
+    - Sends ACK back TO the client's address
 
   Step 6: CLOSE
     - close(server_fd)

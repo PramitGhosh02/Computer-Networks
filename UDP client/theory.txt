@@ -66,19 +66,13 @@ Datagram:
     - inet_pton(AF_INET, "127.0.0.1", &addr)
     - This is WHERE to send the datagram
 
-  Step 3: SEND DATAGRAM
-    - sendto(sock_fd, message, length, 0, server_addr, len)
-    - Sends "Hello from UDP Client!" to the server
-    - No connection setup — data sent immediately
-    - The OS automatically assigns a source port
+  Step 3: CONTINUOUS COMMUNICATION LOOP
+    - while(1) loop prompts user for input via fgets()
+    - sendto() transmits datagram to server
+    - recvfrom() receives acknowledgment
+    - Breaks loop if user types "exit" or closes window
 
-  Step 4: RECEIVE RESPONSE
-    - recvfrom(sock_fd, buffer, size, 0, server_addr, &len)
-    - Waits for the server's response datagram
-    - If server never responds, this blocks forever
-      (can set timeout with setsockopt)
-
-  Step 5: CLOSE
+  Step 4: CLOSE
     - close(sock_fd)
     - No termination handshake (nothing to terminate)
 
